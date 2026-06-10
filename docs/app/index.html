@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nightlife Paris — App</title>
+  <meta name="description" content="Dashboard promoteur Nightlife Paris — version navigateur, données stockées localement." />
+  <style>
+    :root {
+      --bg: #0a0a0f; --card: #14141f; --border: #2a2a3a;
+      --violet: #8b5cf6; --violet-dark: #6d28d9; --rose: #ec4899;
+      --or: #f59e0b; --vert: #22c55e; --rouge: #ef4444; --cyan: #06b6d4;
+      --texte: #e5e7eb; --muted: #9ca3af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); color: var(--texte); min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.5;
+    }
+    a { color: inherit; }
+    nav {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(10,10,15,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 1200px; margin: 0 auto; padding: 14px 20px;
+      display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+    }
+    .logo {
+      font-weight: 800; font-size: 16px; letter-spacing: -0.5px; text-decoration: none;
+      background: linear-gradient(90deg, var(--violet), var(--rose));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .nav-links { display: flex; gap: 16px; flex-wrap: wrap; }
+    .nav-links a {
+      font-size: 14px; font-weight: 600; color: var(--muted); text-decoration: none;
+      padding-bottom: 2px; border-bottom: 2px solid transparent;
+    }
+    .nav-links a.active { color: var(--texte); border-bottom-color: var(--violet); }
+    main { max-width: 1200px; margin: 0 auto; padding: 24px 20px 60px; }
+    h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+    .subtitle { color: var(--muted); font-size: 14px; margin: 4px 0 24px; }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 18px; margin-bottom: 14px;
+    }
+    .grid { display: grid; gap: 14px; }
+    .grid-stats { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    .grid-cards { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+    .stat-num {
+      font-size: 30px; font-weight: 800;
+      background: linear-gradient(90deg, var(--violet), var(--rose));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .stat-label { color: var(--muted); font-size: 13px; }
+    form.inline {
+      display: grid; gap: 10px; align-items: end;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    input, select, textarea {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 9px 12px; color: var(--texte); font-size: 14px; outline: none; width: 100%;
+      font-family: inherit;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--violet); }
+    button {
+      cursor: pointer; border-radius: 10px; font-weight: 700; font-size: 13px;
+      padding: 9px 16px; border: none; font-family: inherit;
+    }
+    .btn-primary {
+      background: linear-gradient(90deg, var(--violet-dark), var(--rose)); color: #fff;
+    }
+    .btn-ghost {
+      background: transparent; color: var(--muted); border: 1px solid var(--border);
+      font-size: 11px; padding: 5px 10px; font-weight: 600;
+    }
+    .btn-ghost:hover { color: var(--texte); border-color: var(--violet); }
+    .btn-danger { color: var(--rouge); border-color: rgba(239,68,68,0.35); }
+    .badge {
+      display: inline-block; font-size: 11px; font-weight: 700; border-radius: 999px;
+      padding: 3px 10px; white-space: nowrap;
+    }
+    .row {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 14px; flex-wrap: wrap;
+    }
+    .muted { color: var(--muted); font-size: 13px; }
+    .small { font-size: 12px; }
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .section-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+    .banner {
+      background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.3);
+      border-radius: 12px; padding: 10px 14px; font-size: 13px; color: var(--muted);
+      margin-bottom: 20px;
+    }
+    .slide-view {
+      aspect-ratio: 1/1; border-radius: 12px; max-width: 300px;
+      background: linear-gradient(135deg, var(--violet-dark), var(--rose));
+      display: flex; flex-direction: column; justify-content: flex-end; padding: 14px;
+    }
+    .slide-caption { background: rgba(0,0,0,0.55); border-radius: 8px; padding: 8px 12px; }
+    .dots { display: flex; gap: 5px; justify-content: center; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); cursor: pointer; }
+    .dot.on { background: var(--violet); }
+    hr.sep { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a class="logo" href="#/dashboard">NIGHTLIFE PARIS</a>
+      <div class="nav-links" id="navlinks">
+        <a href="#/dashboard" data-route="dashboard">Dashboard</a>
+        <a href="#/participants" data-route="participants">Participantes</a>
+        <a href="#/evenements" data-route="evenements">Événements</a>
+        <a href="#/contenu" data-route="contenu">Contenu</a>
+        <a href="#/staff" data-route="staff">Staff</a>
+      </div>
+      <div style="margin-left:auto">
+        <button class="btn-ghost" onclick="resetDemo()">↺ Réinitialiser la démo</button>
+      </div>
+    </div>
+  </nav>
+  <main id="app"></main>
+
+<script>
+"use strict";
+
+/* ========== STORE (localStorage) ========== */
+const DB_KEY = "nightlife-db-v1";
+
+const STATUT_COLORS = {
+  EN_ATTENTE: "var(--or)", ACCEPTEE: "var(--vert)", REFUSEE: "var(--rouge)",
+  INVITEE: "var(--violet)", PRESENTE: "var(--cyan)",
+  PLANIFIE: "var(--or)", CONFIRME: "var(--vert)", TERMINE: "var(--muted)", ANNULE: "var(--rouge)",
+  VALIDE: "var(--vert)", REFUSE: "var(--rouge)", PUBLIE: "var(--cyan)",
+  OUI: "var(--vert)", NON: "var(--rouge)",
+};
+
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+
+function seed() {
+  const lieux = [
+    { nom: "Soirée Velvet", lieu: "Le Carmen", adresse: "34 Rue Duperré, 75009 Paris", dressCode: "Chic & noir", statut: "TERMINE", offset: -7 },
+    { nom: "Golden Night", lieu: "Bonnie Rooftop", adresse: "61 Quai de Grenelle, 75015 Paris", dressCode: "Élégant", statut: "CONFIRME", offset: 0 },
+    { nom: "Néon Privé", lieu: "Silencio", adresse: "142 Rue Montmartre, 75002 Paris", dressCode: "Créatif", statut: "CONFIRME", offset: 7 },
+    { nom: "Minuit Blanc", lieu: "Maxim's", adresse: "3 Rue Royale, 75008 Paris", dressCode: "Tout en blanc", statut: "PLANIFIE", offset: 14 },
+    { nom: "After Lights", lieu: "Le Piaf", adresse: "38 Rue Jean Mermoz, 75008 Paris", dressCode: "", statut: "PLANIFIE", offset: 21 },
+  ];
+  const evenements = lieux.map((l, i) => {
+    const d = new Date(); d.setDate(d.getDate() + l.offset);
+    return { id: uid(), nom: l.nom, lieu: l.lieu, adresse: l.adresse, dressCode: l.dressCode,
+      date: d.toISOString().slice(0, 10), heureDebut: "23:00", heureFin: "05:00",
+      maxParticipants: 40 + i * 10, statut: l.statut };
+  });
+  const prenoms = ["Léa","Emma","Chloé","Inès","Jade","Louise","Sarah","Camille","Manon","Zoé",
+    "Lina","Eva","Nina","Maya","Romane","Anna","Clara","Julia","Alice","Lou","Mila","Rose","Iris","Noa","Yasmine"];
+  const statutsP = ["EN_ATTENTE","ACCEPTEE","REFUSEE","INVITEE","PRESENTE"];
+  const participants = prenoms.map((p, i) => ({
+    id: uid(), prenom: p, age: 19 + (i % 9), instagram: "@" + p.toLowerCase() + ".paris",
+    telephone: i % 3 === 0 ? "+3361234" + (1000 + i) : "", email: "",
+    statut: statutsP[i % 5], source: i % 2 === 0 ? "manychat" : "manuel",
+    evenementId: evenements[i % evenements.length].id,
+  }));
+  const staffDefs = [
+    ["Sophie","Martin","Hôtesse",5],["Lucas","Bernard","Photographe",4],["Marc","Dubois","Videur",5],
+    ["Julie","Petit","Hôtesse",3],["Karim","Benali","Videur",4],["Emma","Leroy","Community Manager",4],
+    ["Tom","Moreau","Photographe",2],["Nadia","Cherif","Hôtesse",5],
+  ];
+  const staffs = staffDefs.map((s, i) => ({
+    id: uid(), prenom: s[0], nom: s[1], role: s[2], fiabilite: s[3],
+    whatsapp: "+336700" + (10000 + i), email: "",
+  }));
+  const statutsS = ["OUI","EN_ATTENTE","NON"];
+  const staffEvenements = staffs.map((s, i) => ({
+    id: uid(), staffId: s.id, evenementId: evenements[i % evenements.length].id, statut: statutsS[i % 3],
+  }));
+  const restos = ["Gigi Paris","CoCo Paris","Girafe","Loulou","Mun Paris","Manko","Matignon","L'Avenue"];
+  const statutsC = ["EN_ATTENTE","VALIDE","REFUSE","PUBLIE"];
+  const contenus = restos.map((r, i) => ({
+    id: uid(), restaurant: r, scoreGlobal: 60 + i * 4, scoreViral: 50 + i * 5, scoreLuxe: 70 + i * 3,
+    slides: [
+      { titre: r, sousTitre: "Le spot du moment" },
+      { titre: "Ambiance", sousTitre: "Vibes garanties" },
+      { titre: "Réserve vite", sousTitre: "Lien en bio" },
+    ],
+    caption: "✨ " + r + " — le spot incontournable de Paris ✨",
+    hashtags: "#paris #nightlife #restaurant #parisfood",
+    statut: statutsC[i % 4], publishedAt: statutsC[i % 4] === "PUBLIE" ? new Date().toISOString() : null,
+  }));
+  return { participants, evenements, staffs, staffEvenements, contenus };
+}
+
+let db;
+function load() {
+  try { db = JSON.parse(localStorage.getItem(DB_KEY)); } catch (e) { db = null; }
+  if (!db || !db.participants) { db = seed(); save(); }
+}
+function save() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+function resetDemo() {
+  if (confirm("Réinitialiser toutes les données avec la démo ?")) {
+    db = seed(); save(); render();
+  }
+}
+
+/* ========== HELPERS ========== */
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const badge = (st) =>
+  `<span class="badge" style="color:${STATUT_COLORS[st]};background:color-mix(in srgb, ${STATUT_COLORS[st]} 12%, transparent);border:1px solid color-mix(in srgb, ${STATUT_COLORS[st]} 35%, transparent)">${esc(st)}</span>`;
+const evName = (id) => (db.evenements.find((e) => e.id === id) || {}).nom || "";
+const fmtDate = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+
+/* ========== ACTIONS (équivalents des Server Actions) ========== */
+window.act = {
+  addParticipant(f) {
+    db.participants.unshift({ id: uid(), prenom: f.prenom.value.trim(), age: +f.age.value,
+      instagram: f.instagram.value.trim(), telephone: f.telephone.value.trim(), email: f.email.value.trim(),
+      statut: "EN_ATTENTE", source: "manuel", evenementId: f.evenementId.value || null });
+    save(); render(); return false;
+  },
+  setParticipantStatut(id, st) {
+    const p = db.participants.find((x) => x.id === id); if (p) p.statut = st; save(); render();
+  },
+  delParticipant(id) { db.participants = db.participants.filter((x) => x.id !== id); save(); render(); },
+
+  addEvenement(f) {
+    db.evenements.unshift({ id: uid(), nom: f.nom.value.trim(), date: f.date.value,
+      lieu: f.lieu.value.trim(), adresse: f.adresse.value.trim(),
+      heureDebut: f.heureDebut.value, heureFin: f.heureFin.value,
+      dressCode: f.dressCode.value.trim(), maxParticipants: +f.maxParticipants.value || 50, statut: "PLANIFIE" });
+    save(); render(); return false;
+  },
+  setEvenementStatut(id, st) {
+    const e = db.evenements.find((x) => x.id === id); if (e) e.statut = st; save(); render();
+  },
+  delEvenement(id) {
+    db.evenements = db.evenements.filter((x) => x.id !== id);
+    db.participants.forEach((p) => { if (p.evenementId === id) p.evenementId = null; });
+    db.staffEvenements = db.staffEvenements.filter((se) => se.evenementId !== id);
+    save(); render();
+  },
+
+  addStaff(f) {
+    db.staffs.unshift({ id: uid(), prenom: f.prenom.value.trim(), nom: f.nom.value.trim(),
+      whatsapp: f.whatsapp.value.trim(), email: f.email.value.trim(),
+      role: f.role.value, fiabilite: +f.fiabilite.value });
+    save(); render(); return false;
+  },
+  delStaff(id) {
+    db.staffs = db.staffs.filter((x) => x.id !== id);
+    db.staffEvenements = db.staffEvenements.filter((se) => se.staffId !== id);
+    save(); render();
+  },
+  toggleStaffEvent(staffId, evenementId) {
+    let se = db.staffEvenements.find((x) => x.staffId === staffId && x.evenementId === evenementId);
+    if (!se) db.staffEvenements.push({ id: uid(), staffId, evenementId, statut: "OUI" });
+    else se.statut = se.statut === "OUI" ? "NON" : "OUI";
+    save(); render();
+  },
+
+  addContenu(f) {
+    db.contenus.unshift({ id: uid(), restaurant: f.restaurant.value.trim(),
+      scoreGlobal: 70, scoreViral: 65, scoreLuxe: 75,
+      slides: [
+        { titre: f.restaurant.value.trim(), sousTitre: "Le spot du moment" },
+        { titre: "Ambiance", sousTitre: "Vibes garanties" },
+        { titre: "Réserve vite", sousTitre: "Lien en bio" },
+      ],
+      caption: f.caption.value.trim(), hashtags: f.hashtags.value.trim(),
+      statut: "EN_ATTENTE", publishedAt: null });
+    save(); render(); return false;
+  },
+  setContenuStatut(id, st) {
+    const c = db.contenus.find((x) => x.id === id);
+    if (c) { c.statut = st; c.publishedAt = st === "PUBLIE" ? new Date().toISOString() : null; }
+    save(); render();
+  },
+  delContenu(id) { db.contenus = db.contenus.filter((x) => x.id !== id); save(); render(); },
+  slide(id, dir) {
+    slideIndex[id] = Math.max(0, Math.min(((slideIndex[id] || 0) + dir),
+      (db.contenus.find((c) => c.id === id)?.slides.length || 1) - 1));
+    render();
+  },
+  slideTo(id, i) { slideIndex[id] = i; render(); },
+};
+const slideIndex = {};
+
+/* ========== VUES ========== */
+function statutButtons(current, all, fn) {
+  return all.filter((s) => s !== current)
+    .map((s) => `<button class="btn-ghost" onclick="${fn}('${s}')">${esc(s)}</button>`).join("");
+}
+
+const views = {
+  dashboard() {
+    const total = db.participants.length;
+    const attente = db.participants.filter((p) => p.statut === "EN_ATTENTE").length;
+    const ok = db.participants.filter((p) => ["ACCEPTEE","INVITEE","PRESENTE"].includes(p.statut)).length;
+    const taux = total ? Math.round((ok / total) * 100) : 0;
+    const today = new Date().toISOString().slice(0, 10);
+    const avenir = db.evenements
+      .filter((e) => ["PLANIFIE","CONFIRME"].includes(e.statut) && e.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
+    return `
+      <h1>Dashboard</h1>
+      <p class="subtitle">Vue d'ensemble de vos soirées.</p>
+      <div class="grid grid-stats" style="margin-bottom:20px">
+        ${[["Participantes", total],["En attente", attente],["Acceptées / invitées", ok],["Taux d'acceptation", taux + "%"]]
+          .map(([l, v]) => `<div class="card"><div class="stat-num">${v}</div><div class="stat-label">${l}</div></div>`).join("")}
+      </div>
+      <div class="card">
+        <div class="section-title">Prochaines soirées</div>
+        ${avenir.length === 0 ? '<p class="muted">Aucune soirée à venir.</p>' : avenir.map((e) => {
+          const n = db.participants.filter((p) => p.evenementId === e.id).length;
+          return `<div class="row" style="border-bottom:1px solid var(--border);padding:8px 0">
+            <div><strong>${esc(e.nom)}</strong>
+              <span class="muted"> ${esc(e.lieu)} · ${fmtDate(e.date)} · ${e.heureDebut}–${e.heureFin}</span></div>
+            <div class="actions"><span class="muted">${n}/${e.maxParticipants}</span>${badge(e.statut)}</div>
+          </div>`;
+        }).join("")}
+      </div>`;
+  },
+
+  participants() {
+    const STS = ["EN_ATTENTE","ACCEPTEE","REFUSEE","INVITEE","PRESENTE"];
+    const evOpts = db.evenements.filter((e) => ["PLANIFIE","CONFIRME"].includes(e.statut))
+      .map((e) => `<option value="${e.id}">${esc(e.nom)}</option>`).join("");
+    return `
+      <h1>Participantes</h1>
+      <p class="subtitle">${db.participants.length} candidatures.</p>
+      <div class="card">
+        <div class="section-title">Ajouter une participante</div>
+        <form class="inline" onsubmit="return act.addParticipant(this)">
+          <input name="prenom" placeholder="Prénom *" required />
+          <input name="age" type="number" min="18" max="99" placeholder="Âge *" required />
+          <input name="instagram" placeholder="@instagram *" required />
+          <input name="telephone" placeholder="Téléphone" />
+          <input name="email" type="email" placeholder="Email" />
+          <select name="evenementId"><option value="">— Soirée —</option>${evOpts}</select>
+          <button class="btn-primary">Ajouter</button>
+        </form>
+      </div>
+      ${db.participants.map((p) => `
+        <div class="card row">
+          <div>
+            <strong>${esc(p.prenom)}</strong>
+            <span class="muted"> ${p.age} ans · ${esc(p.instagram)}${p.evenementId ? " · " + esc(evName(p.evenementId)) : ""}</span>
+            <div class="muted small">source : ${esc(p.source)}${p.telephone ? " · " + esc(p.telephone) : ""}</div>
+          </div>
+          <div class="actions">
+            ${badge(p.statut)}
+            ${statutButtons(p.statut, STS, `act.setParticipantStatut.bind(null,'${p.id}')`)}
+            <button class="btn-ghost btn-danger" onclick="act.delParticipant('${p.id}')">Supprimer</button>
+          </div>
+        </div>`).join("")}`;
+  },
+
+  evenements() {
+    const STS = ["PLANIFIE","CONFIRME","TERMINE","ANNULE"];
+    return `
+      <h1>Événements</h1>
+      <p class="subtitle">${db.evenements.length} soirées.</p>
+      <div class="card">
+        <div class="section-title">Créer une soirée</div>
+        <form class="inline" onsubmit="return act.addEvenement(this)">
+          <input name="nom" placeholder="Nom *" required />
+          <input name="date" type="date" required />
+          <input name="lieu" placeholder="Lieu *" required />
+          <input name="adresse" placeholder="Adresse *" required />
+          <input name="heureDebut" type="time" value="23:00" />
+          <input name="heureFin" type="time" value="05:00" />
+          <input name="dressCode" placeholder="Dress code" />
+          <input name="maxParticipants" type="number" min="1" value="50" />
+          <button class="btn-primary">Créer</button>
+        </form>
+      </div>
+      ${db.evenements.slice().sort((a, b) => b.date.localeCompare(a.date)).map((e) => {
+        const n = db.participants.filter((p) => p.evenementId === e.id).length;
+        const staff = db.staffEvenements.filter((se) => se.evenementId === e.id);
+        const okStaff = staff.filter((se) => se.statut === "OUI").length;
+        return `
+        <div class="card">
+          <div class="row">
+            <div>
+              <strong>${esc(e.nom)}</strong> ${badge(e.statut)}
+              <div class="muted small">${esc(e.lieu)} — ${esc(e.adresse)}<br/>
+                ${fmtDate(e.date)} · ${e.heureDebut}–${e.heureFin}${e.dressCode ? " · Dress code : " + esc(e.dressCode) : ""}</div>
+              <div class="muted small">${n}/${e.maxParticipants} participantes · ${okStaff} staff confirmé</div>
+            </div>
+            <div class="actions">
+              ${statutButtons(e.statut, STS, `act.setEvenementStatut.bind(null,'${e.id}')`)}
+              <button class="btn-ghost btn-danger" onclick="act.delEvenement('${e.id}')">Supprimer</button>
+            </div>
+          </div>
+        </div>`;
+      }).join("")}`;
+  },
+
+  staff() {
+    const evs = db.evenements.filter((e) => ["PLANIFIE","CONFIRME"].includes(e.statut));
+    return `
+      <h1>Staff</h1>
+      <p class="subtitle">${db.staffs.length} membres.</p>
+      <div class="card">
+        <div class="section-title">Ajouter un membre</div>
+        <form class="inline" onsubmit="return act.addStaff(this)">
+          <input name="prenom" placeholder="Prénom *" required />
+          <input name="nom" placeholder="Nom *" required />
+          <input name="whatsapp" placeholder="WhatsApp" />
+          <input name="email" type="email" placeholder="Email" />
+          <select name="role"><option>Hôtesse</option><option>Photographe</option><option>Videur</option><option>Community Manager</option><option>DJ</option></select>
+          <select name="fiabilite">${[1,2,3,4,5].map((n) => `<option value="${n}" ${n===3?"selected":""}>Fiabilité ${n}/5</option>`).join("")}</select>
+          <button class="btn-primary">Ajouter</button>
+        </form>
+      </div>
+      ${db.staffs.map((s) => {
+        const liens = db.staffEvenements.filter((se) => se.staffId === s.id);
+        return `
+        <div class="card">
+          <div class="row">
+            <div>
+              <strong>${esc(s.prenom)} ${esc(s.nom)}</strong>
+              <span class="muted"> ${esc(s.role)} · ${"★".repeat(s.fiabilite)}${"☆".repeat(5 - s.fiabilite)}</span>
+              <div class="muted small">${esc(s.whatsapp)}${s.email ? " · " + esc(s.email) : ""}</div>
+              ${liens.length ? `<div class="actions" style="margin-top:6px">${liens.map((se) =>
+                `${badge(se.statut)} <span class="muted small">${esc(evName(se.evenementId))}</span>`).join(" ")}</div>` : ""}
+            </div>
+            <div class="actions">
+              ${evs.map((e) => {
+                const se = liens.find((x) => x.evenementId === e.id);
+                const mark = se ? (se.statut === "OUI" ? "✓" : "✗") : "+";
+                return `<button class="btn-ghost" style="${se?.statut === "OUI" ? "color:var(--vert);border-color:rgba(34,197,94,0.4)" : ""}"
+                  onclick="act.toggleStaffEvent('${s.id}','${e.id}')">${esc(e.nom)} ${mark}</button>`;
+              }).join("")}
+              <button class="btn-ghost btn-danger" onclick="act.delStaff('${s.id}')">Supprimer</button>
+            </div>
+          </div>
+        </div>`;
+      }).join("")}`;
+  },
+
+  contenu() {
+    const STS = ["EN_ATTENTE","VALIDE","REFUSE","PUBLIE"];
+    return `
+      <h1>Contenu Instagram</h1>
+      <p class="subtitle">Pipeline : en attente → validé → publié.</p>
+      <div class="card">
+        <div class="section-title">Créer un contenu</div>
+        <form class="inline" onsubmit="return act.addContenu(this)">
+          <input name="restaurant" placeholder="Restaurant / lieu *" required />
+          <input name="caption" placeholder="Caption" />
+          <input name="hashtags" placeholder="#hashtags" value="#paris #nightlife" />
+          <button class="btn-primary">Créer</button>
+        </form>
+        <p class="muted small" style="margin-top:8px">ℹ️ Le générateur de carrousels avec photos Google Maps nécessite la version serveur (Docker) — voir le README du repo.</p>
+      </div>
+      <div class="grid grid-cards">
+      ${db.contenus.map((c) => {
+        const i = slideIndex[c.id] || 0;
+        const s = c.slides[i] || {};
+        return `
+        <div class="card">
+          <div class="row" style="margin-bottom:8px"><strong>${esc(c.restaurant)}</strong>${badge(c.statut)}</div>
+          <div class="muted small" style="margin-bottom:10px">Global ${c.scoreGlobal} · Viral ${c.scoreViral} · Luxe ${c.scoreLuxe}${c.publishedAt ? " · publié le " + new Date(c.publishedAt).toLocaleDateString("fr-FR") : ""}</div>
+          <div class="slide-view">
+            <div class="slide-caption">
+              <div style="font-weight:800">${esc(s.titre || "")}</div>
+              <div class="muted small">${esc(s.sousTitre || "")}</div>
+            </div>
+          </div>
+          <div class="row" style="max-width:300px;margin-top:8px">
+            <button class="btn-ghost" onclick="act.slide('${c.id}',-1)">←</button>
+            <div class="dots">${c.slides.map((_, j) =>
+              `<span class="dot ${j === i ? "on" : ""}" onclick="act.slideTo('${c.id}',${j})"></span>`).join("")}</div>
+            <button class="btn-ghost" onclick="act.slide('${c.id}',1)">→</button>
+          </div>
+          ${c.caption ? `<p class="small" style="margin-top:10px">${esc(c.caption)}</p>` : ""}
+          ${c.hashtags ? `<p class="small" style="color:var(--violet);margin-top:4px">${esc(c.hashtags)}</p>` : ""}
+          <hr class="sep"/>
+          <div class="actions">
+            ${statutButtons(c.statut, STS, `act.setContenuStatut.bind(null,'${c.id}')`)}
+            <button class="btn-ghost btn-danger" onclick="act.delContenu('${c.id}')">Supprimer</button>
+          </div>
+        </div>`;
+      }).join("")}
+      </div>`;
+  },
+};
+
+/* ========== ROUTER ========== */
+function route() {
+  const r = (location.hash.replace("#/", "") || "dashboard").split("?")[0];
+  return views[r] ? r : "dashboard";
+}
+function render() {
+  const r = route();
+  document.getElementById("app").innerHTML =
+    `<div class="banner">💾 Version navigateur : les données sont stockées localement dans ce navigateur (localStorage).
+      Pour les webhooks ManyChat/n8n et le générateur Google Maps, utilisez la version serveur
+      (<a href="https://github.com/agencywgm-arch/PromOnightLife" style="color:var(--violet)">README du repo</a>).</div>`
+    + views[r]();
+  document.querySelectorAll("#navlinks a").forEach((a) =>
+    a.classList.toggle("active", a.dataset.route === r));
+}
+window.addEventListener("hashchange", render);
+load();
+render();
+</script>
+</body>
+</html>
