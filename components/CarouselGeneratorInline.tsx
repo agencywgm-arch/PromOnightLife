@@ -103,9 +103,14 @@ export default function CarouselGeneratorInline() {
 
   async function save() {
     if (!place) return;
+    // Inclure les images rendues dans les slides pour persistance hors-ligne
+    const slidesWithImages = slides.map((s, i) => ({
+      ...s,
+      imageData: previews[i] ?? null,
+    }));
     const fd = new FormData();
     fd.set("restaurant", place.nom);
-    fd.set("slides", JSON.stringify(slides));
+    fd.set("slides", JSON.stringify(slidesWithImages));
     fd.set("caption", caption);
     fd.set("hashtags", hashtags);
     fd.set("scoreGlobal", "70");
