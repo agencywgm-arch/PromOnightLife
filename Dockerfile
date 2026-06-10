@@ -13,10 +13,8 @@ FROM node:20-slim
 RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NODE_ENV=production
-# Base SQLite sur le volume persistant /data (survit aux redéploiements)
-ENV DATABASE_URL=file:/data/nightlife.db
+# DATABASE_URL (PostgreSQL) est fourni à l'exécution (docker-compose, Railway, etc.)
 COPY --from=builder /app ./
-VOLUME /data
 EXPOSE 3000
 # start.sh : prisma db push + next start (seed démo via instrumentation.ts si base vide)
 CMD ["bash", "start.sh"]
