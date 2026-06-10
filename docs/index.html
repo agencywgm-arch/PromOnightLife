@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nightlife Paris — Le SaaS des promoteurs d'événements</title>
+  <meta name="description" content="Nightlife Paris : dashboard tout-en-un pour promoteurs d'événements nightlife parisiens. Participants, événements, staff, contenu Instagram et agents IA." />
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --bg-card: #14141f;
+      --bg-card-hover: #1a1a2a;
+      --violet: #8b5cf6;
+      --violet-dark: #6d28d9;
+      --rose: #ec4899;
+      --or: #f59e0b;
+      --texte: #e5e7eb;
+      --texte-muted: #9ca3af;
+      --bordure: #2a2a3a;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--texte);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    /* NAV */
+    nav {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(10, 10, 15, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--bordure);
+    }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 24px; max-width: 1100px; margin: 0 auto;
+    }
+    .logo {
+      font-size: 20px; font-weight: 800; letter-spacing: -0.5px;
+      background: linear-gradient(90deg, var(--violet), var(--rose));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .nav-links { display: flex; gap: 28px; font-size: 14px; color: var(--texte-muted); }
+    .nav-links a:hover { color: var(--texte); }
+    @media (max-width: 640px) { .nav-links { display: none; } }
+
+    /* HERO */
+    .hero {
+      position: relative; text-align: center;
+      padding: 110px 24px 90px;
+      background:
+        radial-gradient(ellipse 60% 50% at 50% -10%, rgba(139, 92, 246, 0.25), transparent),
+        radial-gradient(ellipse 40% 40% at 80% 20%, rgba(236, 72, 153, 0.12), transparent);
+    }
+    .badge {
+      display: inline-block; font-size: 13px; font-weight: 600;
+      color: var(--violet); background: rgba(139, 92, 246, 0.12);
+      border: 1px solid rgba(139, 92, 246, 0.35);
+      padding: 6px 16px; border-radius: 999px; margin-bottom: 28px;
+    }
+    h1 {
+      font-size: clamp(36px, 6vw, 64px); font-weight: 900;
+      letter-spacing: -2px; line-height: 1.1; margin-bottom: 24px;
+    }
+    h1 .gradient {
+      background: linear-gradient(90deg, var(--violet), var(--rose), var(--or));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .hero p {
+      font-size: clamp(16px, 2.5vw, 20px); color: var(--texte-muted);
+      max-width: 640px; margin: 0 auto 40px;
+    }
+    .cta-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-block; padding: 14px 32px; border-radius: 12px;
+      font-weight: 700; font-size: 15px; transition: transform .15s, box-shadow .15s;
+    }
+    .btn-primary {
+      background: linear-gradient(90deg, var(--violet-dark), var(--rose));
+      color: #fff; box-shadow: 0 8px 30px rgba(139, 92, 246, 0.35);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(139, 92, 246, 0.5); }
+    .btn-secondary {
+      background: var(--bg-card); border: 1px solid var(--bordure); color: var(--texte);
+    }
+    .btn-secondary:hover { background: var(--bg-card-hover); }
+
+    /* STATS */
+    .stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px; margin: -30px auto 0; max-width: 900px; padding: 0 24px;
+    }
+    .stat {
+      background: var(--bg-card); border: 1px solid var(--bordure);
+      border-radius: 16px; padding: 24px; text-align: center;
+    }
+    .stat .num {
+      font-size: 32px; font-weight: 800;
+      background: linear-gradient(90deg, var(--violet), var(--rose));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .stat .label { font-size: 13px; color: var(--texte-muted); margin-top: 4px; }
+
+    /* SECTIONS */
+    section { padding: 90px 0; }
+    .section-head { text-align: center; margin-bottom: 56px; }
+    .section-head h2 {
+      font-size: clamp(28px, 4vw, 40px); font-weight: 800; letter-spacing: -1px;
+      margin-bottom: 12px;
+    }
+    .section-head p { color: var(--texte-muted); max-width: 560px; margin: 0 auto; }
+
+    /* FEATURES */
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .card {
+      background: var(--bg-card); border: 1px solid var(--bordure);
+      border-radius: 18px; padding: 28px; transition: border-color .2s, transform .2s;
+    }
+    .card:hover { border-color: var(--violet); transform: translateY(-3px); }
+    .card .icon {
+      width: 48px; height: 48px; border-radius: 12px; display: flex;
+      align-items: center; justify-content: center; font-size: 24px;
+      background: rgba(139, 92, 246, 0.12); margin-bottom: 18px;
+    }
+    .card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .card p { font-size: 14px; color: var(--texte-muted); }
+
+    /* WORKFLOW */
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+    .step {
+      position: relative; background: var(--bg-card); border: 1px solid var(--bordure);
+      border-radius: 18px; padding: 32px 24px 28px;
+    }
+    .step .num-badge {
+      position: absolute; top: -16px; left: 24px;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--violet), var(--rose));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 14px; color: #fff;
+    }
+    .step h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .step p { font-size: 13px; color: var(--texte-muted); }
+
+    /* TECH */
+    .tech-list { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+    .tech-pill {
+      background: var(--bg-card); border: 1px solid var(--bordure);
+      border-radius: 999px; padding: 10px 22px; font-size: 14px;
+      color: var(--texte-muted); font-weight: 600;
+    }
+
+    /* AGENTS */
+    .agents { background: linear-gradient(180deg, transparent, rgba(139, 92, 246, 0.05), transparent); }
+    .agent-card { display: flex; gap: 18px; align-items: flex-start; }
+    .agent-card .icon { flex-shrink: 0; }
+
+    /* CTA FINAL */
+    .cta-final {
+      text-align: center;
+      background:
+        radial-gradient(ellipse 50% 60% at 50% 100%, rgba(236, 72, 153, 0.15), transparent);
+      border-top: 1px solid var(--bordure);
+    }
+    .cta-final h2 { font-size: clamp(28px, 4vw, 44px); font-weight: 900; letter-spacing: -1px; margin-bottom: 16px; }
+    .cta-final p { color: var(--texte-muted); margin-bottom: 36px; }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--bordure); padding: 32px 24px;
+      text-align: center; font-size: 13px; color: var(--texte-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="nav-inner">
+      <a href="#" class="logo">NIGHTLIFE PARIS</a>
+      <div class="nav-links">
+        <a href="#fonctionnalites">Fonctionnalités</a>
+        <a href="#workflow">Workflow</a>
+        <a href="#agents">Agents IA</a>
+        <a href="#stack">Stack</a>
+        <a href="https://github.com/agencywgm-arch/PromOnightLife">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <span class="badge">✦ SaaS pour promoteurs d'événements nightlife</span>
+    <h1>Gérez vos soirées parisiennes<br /><span class="gradient">comme un pro.</span></h1>
+    <p>
+      Dashboard tout-en-un pour promoteurs : candidatures participants via ManyChat,
+      gestion événements et staff, génération de carrousels Instagram et agents IA
+      d'automatisation. Tout au même endroit.
+    </p>
+    <div class="cta-row">
+      <a href="https://github.com/agencywgm-arch/PromOnightLife" class="btn btn-primary">Voir le projet</a>
+      <a href="#fonctionnalites" class="btn btn-secondary">Découvrir les fonctionnalités</a>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><div class="num">6</div><div class="label">Modules intégrés</div></div>
+    <div class="stat"><div class="num">100%</div><div class="label">Automatisable via webhooks</div></div>
+    <div class="stat"><div class="num">1080²</div><div class="label">Carrousels IG générés</div></div>
+    <div class="stat"><div class="num">24/7</div><div class="label">Agents IA actifs</div></div>
+  </div>
+
+  <section id="fonctionnalites">
+    <div class="container">
+      <div class="section-head">
+        <h2>Tout ce qu'il faut pour remplir vos soirées</h2>
+        <p>Du premier DM Instagram jusqu'à la liste d'invités le soir J, chaque étape est couverte.</p>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <div class="icon">📊</div>
+          <h3>Dashboard temps réel</h3>
+          <p>Vue d'ensemble de vos événements, candidatures en attente, taux d'acceptation et prochaines soirées en un coup d'œil.</p>
+        </div>
+        <div class="card">
+          <div class="icon">💃</div>
+          <h3>Gestion des participantes</h3>
+          <p>Candidatures reçues automatiquement via ManyChat (Instagram DM). Statuts : en attente, acceptée, refusée, invitée, présente.</p>
+        </div>
+        <div class="card">
+          <div class="icon">🎉</div>
+          <h3>Événements</h3>
+          <p>Planifiez vos soirées : lieu, horaires, dress code, capacité max. Statuts planifié / confirmé / terminé / annulé.</p>
+        </div>
+        <div class="card">
+          <div class="icon">📸</div>
+          <h3>Contenu Instagram</h3>
+          <p>Pipeline de validation de contenu avec scores viral &amp; luxe, génération de carrousels 1080×1080 alimentés par Google Maps.</p>
+        </div>
+        <div class="card">
+          <div class="icon">🤝</div>
+          <h3>Staff &amp; équipes</h3>
+          <p>Gérez hôtesses, photographes et videurs avec score de fiabilité, et leurs confirmations par événement (oui / non / en attente).</p>
+        </div>
+        <div class="card">
+          <div class="icon">🔗</div>
+          <h3>Webhooks ManyChat &amp; n8n</h3>
+          <p>API webhooks sécurisées pour recevoir les candidatures et valider automatiquement les participantes depuis vos automatisations.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="workflow">
+    <div class="container">
+      <div class="section-head">
+        <h2>Un workflow pensé pour le terrain</h2>
+        <p>De la story Instagram à la porte du club, en quatre étapes.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="num-badge">1</div>
+          <h3>Candidature automatique</h3>
+          <p>La participante répond à votre story IG. ManyChat collecte prénom, âge, Instagram et envoie tout au dashboard via webhook.</p>
+        </div>
+        <div class="step">
+          <div class="num-badge">2</div>
+          <h3>Tri &amp; validation</h3>
+          <p>Acceptez ou refusez en un clic depuis la page Participants — ou laissez n8n et les agents IA pré-filtrer selon vos critères.</p>
+        </div>
+        <div class="step">
+          <div class="num-badge">3</div>
+          <h3>Invitation &amp; staffing</h3>
+          <p>Les acceptées reçoivent les détails de la soirée. Le staff confirme sa présence, la capacité est suivie en temps réel.</p>
+        </div>
+        <div class="step">
+          <div class="num-badge">4</div>
+          <h3>Promotion IG</h3>
+          <p>Générez le carrousel du lieu en un clic (photos Google Maps), validez le contenu et publiez avec caption et hashtags prêts.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="agents" class="agents">
+    <div class="container">
+      <div class="section-head">
+        <h2>Agents IA configurables</h2>
+        <p>Chaque agent se configure et se teste directement depuis le dashboard, avec de vrais appels API.</p>
+      </div>
+      <div class="grid">
+        <div class="card agent-card">
+          <div class="icon">🤖</div>
+          <div>
+            <h3>Agent ManyChat</h3>
+            <p>Connecté à l'API ManyChat pour répondre aux DM, relancer les candidates et synchroniser les statuts automatiquement.</p>
+          </div>
+        </div>
+        <div class="card agent-card">
+          <div class="icon">📱</div>
+          <div>
+            <h3>Agent Meta / Instagram</h3>
+            <p>Appels réels à l'API Meta : publication de contenu validé, suivi des interactions et collecte de leads depuis vos posts.</p>
+          </div>
+        </div>
+        <div class="card agent-card">
+          <div class="icon">🗺️</div>
+          <div>
+            <h3>Générateur de carrousels</h3>
+            <p>Canvas 1080×1080 avec photos Google Places par slide, proxy serveur et cache 24h. Du nom du restaurant au carrousel en secondes.</p>
+          </div>
+        </div>
+        <div class="card agent-card">
+          <div class="icon">⚙️</div>
+          <div>
+            <h3>Configuration persistée</h3>
+            <p>Chaque agent est activable/désactivable, sa configuration JSON est sauvegardée en base et testable en un clic.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="stack">
+    <div class="container">
+      <div class="section-head">
+        <h2>Stack technique</h2>
+        <p>Moderne, simple à déployer, sans dépendances superflues.</p>
+      </div>
+      <div class="tech-list">
+        <span class="tech-pill">Next.js 14 — App Router</span>
+        <span class="tech-pill">TypeScript</span>
+        <span class="tech-pill">Prisma ORM</span>
+        <span class="tech-pill">SQLite</span>
+        <span class="tech-pill">Server Actions</span>
+        <span class="tech-pill">JWT (Jose)</span>
+        <span class="tech-pill">Google Places API</span>
+        <span class="tech-pill">ManyChat</span>
+        <span class="tech-pill">n8n</span>
+        <span class="tech-pill">Docker · GHCR</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-final">
+    <div class="container">
+      <h2>Prêt à remplir votre prochaine soirée ?</h2>
+      <p>Le code est open source — déployez votre propre instance en une commande avec Docker.</p>
+      <div class="cta-row">
+        <a href="https://github.com/agencywgm-arch/PromOnightLife" class="btn btn-primary">Voir le repo GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>© 2026 Nightlife Paris — SaaS de gestion d'événements nightlife · Fait avec ❤️ à Paris</p>
+  </footer>
+
+</body>
+</html>
