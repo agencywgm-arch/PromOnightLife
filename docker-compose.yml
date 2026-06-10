@@ -1,0 +1,19 @@
+services:
+  app:
+    build: .
+    # ou bien l'image publiée par le workflow GitHub Actions :
+    # image: ghcr.io/agencywgm-arch/promonightlife:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - nightlife-data:/data
+    environment:
+      # Toutes optionnelles — décommenter et renseigner selon besoin :
+      # AUTH_SECRET: "change-moi"
+      # GOOGLE_PLACES_API_KEY: ""
+      # WEBHOOK_SECRET: ""
+      PORT: "3000"
+    restart: unless-stopped
+
+volumes:
+  nightlife-data:
