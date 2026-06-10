@@ -15,22 +15,32 @@ automatiquement sur GitHub Pages par le workflow
 
 > https://agencywgm-arch.github.io/PromOnightLife/
 
-## 🚀 Démarrage rapide
+## 🚀 Déploiement gratuit & fonctionnel — voir [DEPLOIEMENT.md](DEPLOIEMENT.md)
+
+L'app complète (agent carrousel, webhooks, base de données) se déploie
+**gratuitement sur Vercel**, branchée sur ce repo GitHub. Étapes détaillées
+dans **[DEPLOIEMENT.md](DEPLOIEMENT.md)** (Vercel + base Neon, ~10 min, 0 €).
+
+> ℹ️ GitHub Pages ne sert que des fichiers statiques : il ne peut pas exécuter
+> l'agent carrousel ni les webhooks. Pour une app réellement fonctionnelle,
+> il faut un hébergeur qui exécute Next.js (Vercel, Docker…).
+
+## 🧪 Démarrage local
 
 ```bash
-npm install            # installe les dépendances + prisma generate
-npm run db:push        # crée la base SQLite (dev.db)
-npm run dev            # http://localhost:3000
+cp .env.example .env    # renseigne DATABASE_URL (Neon/Postgres) + AUTH_SECRET
+npm install
+npm run db:push         # crée les tables
+npm run dev             # http://localhost:3000
 ```
 
 Connexion démo : `promoteur@nightlife-paris.fr` / `nightlife2026` — mais `requireAuth()`
 auto-crée la session du promoteur unique, le dashboard est donc accessible directement.
 
-## 🐳 Déploiement (Docker, sans Railway)
+## 🐳 Déploiement Docker (auto-hébergé)
 
-Le projet se déploie partout via Docker. La base SQLite vit sur le volume `/data`
-et survit aux redéploiements. Le seed de démo est injecté par `instrumentation.ts`
-si la base est vide.
+`docker compose up -d` lance l'app **et** une base PostgreSQL avec volume persistant.
+Le seed de démo est injecté par `instrumentation.ts` si la base est vide.
 
 ```bash
 # En local ou sur un VPS :
@@ -42,13 +52,13 @@ docker compose up -d        # build + volume persistant + port 3000
 publie l'image sur **GitHub Container Registry** :
 
 ```bash
-docker run -d -p 3000:3000 -v nightlife-data:/data \
+docker run -d -p 3000:3000 \
+  -e DATABASE_URL="postgresql://user:pass@host:5432/db" \
   ghcr.io/agencywgm-arch/promonightlife:latest
 ```
 
-Hébergeurs compatibles avec cette image + un disque persistant : VPS (Docker/Coolify),
-Fly.io, Render, Scaleway, etc. Pour Vercel il faudrait remplacer SQLite par une base
-hébergée (Turso/Postgres) — non inclus ici.
+Hébergeurs compatibles : Vercel (voir [DEPLOIEMENT.md](DEPLOIEMENT.md)),
+VPS Docker/Coolify, Fly.io, Render, Scaleway, etc.
 
 ## 📡 Webhooks
 
@@ -60,18 +70,22 @@ hébergée (Turso/Postgres) — non inclus ici.
 ## 🛠 Stack de l'application
 
 - Next.js 14 (App Router) · TypeScript
-- Prisma ORM · SQLite
+- Prisma ORM · PostgreSQL (Neon en gratuit)
 - Server Actions (CRUD participants / événements / staff / contenu)
 - Auth JWT (Jose)
 - Webhooks ManyChat / n8n
 - Générateur de carrousels Instagram 1080×1080 (Google Places API)
-- Docker · image publiée sur GHCR
+- Déploiement Vercel (gratuit) ou Docker · image publiée sur GHCR
 
-## ⚙️ Variables d'environnement (toutes optionnelles)
+## ⚙️ Variables d'environnement
 
-| Variable | Rôle | Défaut |
+Modèle complet et commenté dans **[`.env.example`](.env.example)**.
+
+| Variable | Rôle | Obligatoire |
 |---|---|---|
-| `DATABASE_URL` | Base SQLite | `file:./dev.db` |
-| `AUTH_SECRET` | Secret JWT | valeur de dev intégrée |
-| `GOOGLE_PLACES_API_KEY` | Générateur de carrousels | — (générateur désactivé) |
-| `WEBHOOK_SECRET` | Protection des webhooks | — (webhooks ouverts) |
+| `DATABASE_URL` | Base PostgreSQL (Neon) | ✅ oui |
+| `AUTH_SECRET` | Secret JWT des sessions | recommandé |
+| `GOOGLE_PLACES_API_KEY` | Photos de l'agent carrousel | pour le carrousel |
+| `META_ACCESS_TOKEN` / `META_IG_USER_ID` | Publication Instagram | pour publier |
+| `MANYCHAT_API_KEY` | Candidatures via DM Instagram | optionnel |
+| `WEBHOOK_SECRET` | Protection des webhooks | optionnel |

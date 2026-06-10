@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "start": "bash start.sh",
+    "start": "next start",
     "db:push": "prisma db push",
     "postinstall": "prisma generate"
   },

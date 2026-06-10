@@ -1,19 +1,39 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: nightlife
+      POSTGRES_PASSWORD: nightlife
+      POSTGRES_DB: nightlife
+    volumes:
+      - nightlife-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nightlife"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   app:
     build: .
     # ou bien l'image publiée par le workflow GitHub Actions :
     # image: ghcr.io/agencywgm-arch/promonightlife:latest
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "3000:3000"
-    volumes:
-      - nightlife-data:/data
     environment:
-      # Toutes optionnelles — décommenter et renseigner selon besoin :
+      DATABASE_URL: "postgresql://nightlife:nightlife@db:5432/nightlife"
+      PORT: "3000"
+      # Décommenter et renseigner selon besoin (voir .env.example) :
       # AUTH_SECRET: "change-moi"
       # GOOGLE_PLACES_API_KEY: ""
+      # META_ACCESS_TOKEN: ""
+      # META_IG_USER_ID: ""
+      # MANYCHAT_API_KEY: ""
       # WEBHOOK_SECRET: ""
-      PORT: "3000"
     restart: unless-stopped
 
 volumes:
-  nightlife-data:
+  nightlife-pgdata:
