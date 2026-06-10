@@ -15,6 +15,27 @@ automatiquement sur GitHub Pages par le workflow
 
 > https://agencywgm-arch.github.io/PromOnightLife/
 
+## 🚀 Démarrage rapide
+
+```bash
+npm install            # installe les dépendances + prisma generate
+npm run db:push        # crée la base SQLite (dev.db)
+npm run dev            # http://localhost:3000
+```
+
+En production (Railway) : `npm run build` puis `bash start.sh` (db push + next start ;
+le seed de démo est injecté par `instrumentation.ts` si la base est vide).
+
+Connexion démo : `promoteur@nightlife-paris.fr` / `nightlife2026` — mais `requireAuth()`
+auto-crée la session du promoteur unique, le dashboard est donc accessible directement.
+
+## 📡 Webhooks
+
+- `POST /api/webhook/participant` — réception candidature ManyChat
+  (`{ prenom, age, instagram, telephone?, email?, manychatId?, evenementId? }`)
+- `POST /api/webhook/validate` — validation n8n (`{ id | manychatId, statut }`)
+- Si `WEBHOOK_SECRET` est défini : header `x-webhook-secret` ou `?secret=` requis.
+
 ## 🛠 Stack de l'application
 
 - Next.js 14 (App Router) · TypeScript

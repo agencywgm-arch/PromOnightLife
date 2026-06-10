@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Promoteur {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  nom       String
+  createdAt DateTime @default(now())
+}
+
+model Participant {
+  id          String     @id @default(cuid())
+  prenom      String
+  age         Int
+  instagram   String
+  telephone   String?
+  email       String?
+  statut      String     @default("EN_ATTENTE") // EN_ATTENTE | ACCEPTEE | REFUSEE | INVITEE | PRESENTE
+  manychatId  String?
+  source      String     @default("manuel")
+  evenementId String?
+  evenement   Evenement? @relation(fields: [evenementId], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Evenement {
+  id              String           @id @default(cuid())
+  nom             String
+  date            DateTime
+  lieu            String
+  adresse         String
+  heureDebut      String
+  heureFin        String
+  dressCode       String?
+  maxParticipants Int              @default(50)
+  statut          String           @default("PLANIFIE") // PLANIFIE | CONFIRME | TERMINE | ANNULE
+  participants    Participant[]
+  staff           StaffEvenement[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model Staff {
+  id         String           @id @default(cuid())
+  prenom     String
+  nom        String
+  whatsapp   String?
+  email      String?
+  role       String
+  fiabilite  Int              @default(3) // 1-5
+  evenements StaffEvenement[]
+  createdAt  DateTime         @default(now())
+}
+
+model StaffEvenement {
+  id          String    @id @default(cuid())
+  staffId     String
+  evenementId String
+  statut      String    @default("EN_ATTENTE") // EN_ATTENTE | OUI | NON
+  staff       Staff     @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  evenement   Evenement @relation(fields: [evenementId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, evenementId])
+}
+
+model Contenu {
+  id          String    @id @default(cuid())
+  restaurant  String
+  scoreGlobal Int       @default(0)
+  scoreViral  Int       @default(0)
+  scoreLuxe   Int       @default(0)
+  slides      String    @default("[]") // JSON string
+  caption     String?
+  hashtags    String?
+  statut      String    @default("EN_ATTENTE") // EN_ATTENTE | VALIDE | REFUSE | PUBLIE
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model AgentConfig {
+  id        String   @id @default(cuid())
+  agentId   String   @unique
+  active    Boolean  @default(false)
+  values    String   @default("{}") // JSON string
+  updatedAt DateTime @updatedAt
+}
