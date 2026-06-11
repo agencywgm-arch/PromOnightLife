@@ -63,17 +63,17 @@ function SlidePicker({
   const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [provider, setProvider] = useState<string | null>(null); // foursquare | google | pexels
+  const [provider, setProvider] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [customUrl, setCustomUrl] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
 
-  // Photos réelles du restaurant : Foursquare/Google si configurés,
-  // sinon bascule automatiquement sur la recherche web (aucune clé requise)
+  const googleImagesUrl = `https://www.google.com/search?q=${encodeURIComponent(`"${restaurantNom}" restaurant Paris`)}&tbm=isch&hl=fr`;
+
   async function searchPlace() {
     setLoading(true);
     setError(null);
     try {
-      // 1. APIs lieux (si clés configurées)
       const res = await fetch(
         `/api/images/place?name=${encodeURIComponent(restaurantNom)}&address=${encodeURIComponent(restaurantAdresse)}`
       );
@@ -93,29 +93,8 @@ function SlidePicker({
         return;
       }
 
-      // 2. Fallback : recherche d'images web (DuckDuckGo, sans clé)
-      const webRes = await fetch(
-        `/api/images/web?q=${encodeURIComponent(`"${restaurantNom}" restaurant Paris`)}`
-      );
-      const webData = await webRes.json();
-      if (!webRes.ok) {
-        setError(webData.error || data.error || "Photos introuvables");
-        return;
-      }
-      if ((webData.photos || []).length === 0) {
-        setError(`Aucune photo trouvée pour « ${restaurantNom} ». Colle une URL d'image ci-dessous.`);
-        return;
-      }
-      setPhotos(
-        webData.photos.map((p: { src: string; thumb: string; source: string }, i: number) => ({
-          id: i,
-          pageUrl: "",
-          photographer: p.source,
-          src: p.src,
-          thumb: p.thumb,
-        }))
-      );
-      setProvider("web");
+      // Aucune API disponible → afficher le panel de recherche manuelle
+      setShowSearch(true);
       setSearched(true);
     } finally {
       setLoading(false);
@@ -220,6 +199,27 @@ function SlidePicker({
           <button onClick={searchPexels} disabled={loading} style={{ ...btnGhost, fontSize: 10, padding: "3px 8px" }}>
             🎨 Pexels
           </button>
+        </div>
+      )}
+
+      {/* Panel recherche manuelle — s'affiche quand aucune API n'a trouvé de photos */}
+      {showSearch && photos.length === 0 && (
+        <div style={{ marginTop: 10, padding: 12, background: "#0d0d1a", borderRadius: 8, border: "1px solid #2a1a4a" }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: colors.texte, marginBottom: 8 }}>
+            📷 Cherche une photo pour ce slide
+          </div>
+          <div style={{ fontSize: 11, color: colors.muted, marginBottom: 10, lineHeight: 1.5 }}>
+            Google bloque les recherches automatiques depuis les serveurs. Voici comment faire en 10 secondes :
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <a href={googleImagesUrl} target="_blank" rel="noopener noreferrer"
+              style={{ ...btnPrimary, fontSize: 11, textAlign: "center", textDecoration: "none", display: "block" }}>
+              🔍 Ouvrir Google Images → "{restaurantNom}"
+            </a>
+            <div style={{ fontSize: 11, color: colors.muted, lineHeight: 1.5 }}>
+              Sur Google Images : clique sur une photo → <strong style={{ color: colors.texte }}>clic droit</strong> sur l'image agrandie → <strong style={{ color: colors.texte }}>"Copier l'adresse de l'image"</strong> → colle ci-dessous
+            </div>
+          </div>
         </div>
       )}
 
