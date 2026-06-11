@@ -13,9 +13,65 @@ type PlacePhoto = {
 
 /**
  * Photos réelles d'un restaurant. Sources par ordre de priorité :
- * 1. Foursquare Places API v3 (FOURSQUARE_API_KEY) — excellente couverture Paris, gratuit sans carte
+ * 1. Foursquare (FOURSQUARE_API_KEY) — Service Key (nouvelle API) ou clé v3 legacy
  * 2. Google Places (GOOGLE_PLACES_API_KEY) — photos Google Maps
  */
+
+type FsqPhoto = { prefix: string; suffix: string };
+
+// Nouvelle API Foursquare (Service Keys, comptes créés depuis 2025)
+async function foursquareNew(key: string, query: string): Promise<{ name: string; photos: FsqPhoto[] } | null> {
+  const headers = {
+    Authorization: `Bearer ${key}`,
+    Accept: "application/json",
+    "X-Places-Api-Version": "2025-06-17",
+  };
+  const searchRes = await fetch(
+    `https://places-api.foursquare.com/places/search?query=${encodeURIComponent(query)}&near=Paris%2C+France&limit=1`,
+    { headers }
+  );
+  if (!searchRes.ok) return null;
+  const search = await searchRes.json();
+  const place = search.results?.[0];
+  const id = place?.fsq_place_id || place?.fsq_id;
+  if (!id) return null;
+
+  const photoRes = await fetch(
+    `https://places-api.foursquare.com/places/${id}/photos?limit=8`,
+    { headers }
+  );
+  if (!photoRes.ok) return null;
+  const photoData = await photoRes.json();
+  return {
+    name: place.name || query,
+    photos: Array.isArray(photoData) ? photoData : [],
+  };
+}
+
+// Ancienne API Foursquare v3 (clés legacy commençant par fsq3...)
+async function foursquareLegacy(key: string, query: string): Promise<{ name: string; photos: FsqPhoto[] } | null> {
+  const headers = { Authorization: key, Accept: "application/json" };
+  const searchRes = await fetch(
+    `https://api.foursquare.com/v3/places/search?query=${encodeURIComponent(query)}&near=Paris%2C+France&limit=1`,
+    { headers }
+  );
+  if (!searchRes.ok) return null;
+  const search = await searchRes.json();
+  const place = search.results?.[0];
+  if (!place?.fsq_id) return null;
+
+  const photoRes = await fetch(
+    `https://api.foursquare.com/v3/places/${place.fsq_id}/photos?limit=8`,
+    { headers }
+  );
+  if (!photoRes.ok) return null;
+  const photoData = await photoRes.json();
+  return {
+    name: place.name || query,
+    photos: Array.isArray(photoData) ? photoData : [],
+  };
+}
+
 export async function GET(req: NextRequest) {
   const name = req.nextUrl.searchParams.get("name")?.trim();
   const address = req.nextUrl.searchParams.get("address")?.trim() || "";
@@ -30,48 +86,25 @@ export async function GET(req: NextRequest) {
   const fsqKey = process.env.FOURSQUARE_API_KEY;
   const googleKey = process.env.GOOGLE_PLACES_API_KEY;
 
-  // --- 1. Foursquare Places v3 -------------------------------------------
+  // --- 1. Foursquare (nouvelle API puis legacy) ---------------------------
   if (fsqKey) {
     try {
       const query = `${name}${address ? ` ${address}` : ""}`;
-      const searchRes = await fetch(
-        `https://api.foursquare.com/v3/places/search?query=${encodeURIComponent(query)}&near=Paris%2C+France&limit=1&categories=13000`,
-        {
-          headers: {
-            Authorization: fsqKey,
-            Accept: "application/json",
-          },
-        }
-      );
-      const search = await searchRes.json();
-      const place = search.results?.[0];
+      // Les clés legacy commencent par fsq3 ; les Service Keys non.
+      const result = fsqKey.startsWith("fsq3")
+        ? (await foursquareLegacy(fsqKey, query)) || (await foursquareNew(fsqKey, query))
+        : (await foursquareNew(fsqKey, query)) || (await foursquareLegacy(fsqKey, query));
 
-      if (place?.fsq_id) {
-        const photoRes = await fetch(
-          `https://api.foursquare.com/v3/places/${place.fsq_id}/photos?limit=8`,
-          {
-            headers: {
-              Authorization: fsqKey,
-              Accept: "application/json",
-            },
-          }
-        );
-        const photoData = await photoRes.json();
-        const photoList: { prefix: string; suffix: string }[] = Array.isArray(photoData)
-          ? photoData
-          : [];
-
-        if (photoList.length > 0) {
-          const photos: PlacePhoto[] = photoList.map((p) => ({
-            // proxifié pour CORS canvas
-            src: `/api/images/proxy?url=${encodeURIComponent(`${p.prefix}original${p.suffix}`)}`,
-            thumb: `/api/images/proxy?url=${encodeURIComponent(`${p.prefix}200x200${p.suffix}`)}`,
-            source: `${place.name} / Foursquare`,
-          }));
-          const payload = { provider: "foursquare", photos };
-          cache.set(cacheKey, { data: payload, expires: Date.now() + TTL });
-          return NextResponse.json(payload);
-        }
+      if (result && result.photos.length > 0) {
+        const photos: PlacePhoto[] = result.photos.map((p) => ({
+          // proxifié pour CORS canvas
+          src: `/api/images/proxy?url=${encodeURIComponent(`${p.prefix}original${p.suffix}`)}`,
+          thumb: `/api/images/proxy?url=${encodeURIComponent(`${p.prefix}200x200${p.suffix}`)}`,
+          source: `${result.name} / Foursquare`,
+        }));
+        const payload = { provider: "foursquare", photos };
+        cache.set(cacheKey, { data: payload, expires: Date.now() + TTL });
+        return NextResponse.json(payload);
       }
     } catch (e) {
       console.error("[place] Foursquare échec :", e);
