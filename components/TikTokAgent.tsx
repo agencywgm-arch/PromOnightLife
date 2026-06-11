@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { createContenu } from "@/lib/actions";
 import { card, btnPrimary, btnGhost, input, colors } from "@/lib/ui";
@@ -64,7 +64,7 @@ function SlidePicker({
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [provider, setProvider] = useState<string | null>(null); // foursquare | google | pexels
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ReactNode | null>(null);
   const [customUrl, setCustomUrl] = useState("");
 
   // Photos réelles du restaurant : Foursquare/Google si configurés,
@@ -103,15 +103,28 @@ function SlidePicker({
       if (webData.fallback && webData.searchUrl) {
         setError(
           <>
-            Recherche automatique indisponible.{" "}
+            {webData.message || "Recherche automatique indisponible."}{" "}
             <a
               href={webData.searchUrl}
               target="_blank"
               rel="noopener noreferrer"
               style={{ color: "#4ab3ff", textDecoration: "underline" }}
             >
-              Chercher manuellement sur DuckDuckGo
+              Chercher sur Google Images
             </a>
+            {webData.searchUrlAlt && (
+              <>
+                {" · "}
+                <a
+                  href={webData.searchUrlAlt}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "#4ab3ff", textDecoration: "underline" }}
+                >
+                  DuckDuckGo
+                </a>
+              </>
+            )}
             {" — puis colle l'URL d'une image ci-dessous."}
           </>
         );
