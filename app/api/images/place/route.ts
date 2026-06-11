@@ -6,15 +6,15 @@ const cache = new Map<string, { data: unknown; expires: number }>();
 const TTL = 24 * 60 * 60 * 1000; // 24h
 
 type PlacePhoto = {
-  src: string;    // URL à utiliser pour la composition (proxifiée si besoin)
-  thumb: string;  // miniature
-  source: string; // crédit
+  src: string;
+  thumb: string;
+  source: string;
 };
 
 /**
  * Photos réelles d'un restaurant. Sources par ordre de priorité :
- * 1. Google Places (GOOGLE_PLACES_API_KEY) — photos Google Maps du lieu
- * 2. Yelp Fusion (YELP_API_KEY) — photos officielles Yelp, clé gratuite
+ * 1. Foursquare Places API v3 (FOURSQUARE_API_KEY) — excellente couverture Paris, gratuit sans carte
+ * 2. Google Places (GOOGLE_PLACES_API_KEY) — photos Google Maps
  */
 export async function GET(req: NextRequest) {
   const name = req.nextUrl.searchParams.get("name")?.trim();
@@ -27,10 +27,58 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(cached.data);
   }
 
+  const fsqKey = process.env.FOURSQUARE_API_KEY;
   const googleKey = process.env.GOOGLE_PLACES_API_KEY;
-  const yelpKey = process.env.YELP_API_KEY;
 
-  // --- 1. Google Places --------------------------------------------------
+  // --- 1. Foursquare Places v3 -------------------------------------------
+  if (fsqKey) {
+    try {
+      const query = `${name}${address ? ` ${address}` : ""}`;
+      const searchRes = await fetch(
+        `https://api.foursquare.com/v3/places/search?query=${encodeURIComponent(query)}&near=Paris%2C+France&limit=1&categories=13000`,
+        {
+          headers: {
+            Authorization: fsqKey,
+            Accept: "application/json",
+          },
+        }
+      );
+      const search = await searchRes.json();
+      const place = search.results?.[0];
+
+      if (place?.fsq_id) {
+        const photoRes = await fetch(
+          `https://api.foursquare.com/v3/places/${place.fsq_id}/photos?limit=8`,
+          {
+            headers: {
+              Authorization: fsqKey,
+              Accept: "application/json",
+            },
+          }
+        );
+        const photoData = await photoRes.json();
+        const photoList: { prefix: string; suffix: string }[] = Array.isArray(photoData)
+          ? photoData
+          : [];
+
+        if (photoList.length > 0) {
+          const photos: PlacePhoto[] = photoList.map((p) => ({
+            // proxifié pour CORS canvas
+            src: `/api/images/proxy?url=${encodeURIComponent(`${p.prefix}original${p.suffix}`)}`,
+            thumb: `/api/images/proxy?url=${encodeURIComponent(`${p.prefix}200x200${p.suffix}`)}`,
+            source: `${place.name} / Foursquare`,
+          }));
+          const payload = { provider: "foursquare", photos };
+          cache.set(cacheKey, { data: payload, expires: Date.now() + TTL });
+          return NextResponse.json(payload);
+        }
+      }
+    } catch (e) {
+      console.error("[place] Foursquare échec :", e);
+    }
+  }
+
+  // --- 2. Google Places ---------------------------------------------------
   if (googleKey) {
     try {
       const searchRes = await fetch(
@@ -64,45 +112,11 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // --- 2. Yelp Fusion ----------------------------------------------------
-  if (yelpKey) {
-    try {
-      const searchRes = await fetch(
-        `https://api.yelp.com/v3/businesses/search?term=${encodeURIComponent(name)}&location=${encodeURIComponent(
-          address ? `${address}, Paris, France` : "Paris, France"
-        )}&limit=1`,
-        { headers: { Authorization: `Bearer ${yelpKey}` } }
-      );
-      const search = await searchRes.json();
-      const biz = search.businesses?.[0];
-      if (biz?.id) {
-        const detailsRes = await fetch(`https://api.yelp.com/v3/businesses/${biz.id}`, {
-          headers: { Authorization: `Bearer ${yelpKey}` },
-        });
-        const details = await detailsRes.json();
-        const urls: string[] = details.photos || [];
-        if (urls.length > 0) {
-          const photos: PlacePhoto[] = urls.map((u) => ({
-            // proxifié : le CDN Yelp ne permet pas le CORS pour le canvas
-            src: `/api/images/proxy?url=${encodeURIComponent(u)}`,
-            thumb: `/api/images/proxy?url=${encodeURIComponent(u)}`,
-            source: `${details.name} / Yelp`,
-          }));
-          const payload = { provider: "yelp", photos };
-          cache.set(cacheKey, { data: payload, expires: Date.now() + TTL });
-          return NextResponse.json(payload);
-        }
-      }
-    } catch (e) {
-      console.error("[place] Yelp échec :", e);
-    }
-  }
-
-  if (!googleKey && !yelpKey) {
+  if (!fsqKey && !googleKey) {
     return NextResponse.json(
       {
         error:
-          "Aucune source de photos réelles configurée. Ajoute YELP_API_KEY (gratuit, sans carte) ou GOOGLE_PLACES_API_KEY dans Vercel.",
+          "Configure FOURSQUARE_API_KEY dans Vercel (gratuit, sans carte : foursquare.com/developers).",
         noProvider: true,
       },
       { status: 503 }
