@@ -122,7 +122,46 @@ export default async function ContenuPage() {
                       </p>
                     )}
 
-                    <CarouselViewer slides={slides} />
+                    {slides.some((s) => s.imageData) ? (
+                      <div>
+                        <p style={{ fontSize: 11, color: colors.muted, margin: "0 0 6px" }}>
+                          Slides composées (clique pour télécharger) :
+                        </p>
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(4, 1fr)",
+                            gap: 6,
+                          }}
+                        >
+                          {slides.map((s, i) =>
+                            s.imageData ? (
+                              <a
+                                key={i}
+                                href={s.imageData}
+                                download={`${c.restaurant.replace(/\s+/g, "_")}_slide_${i + 1}.jpg`}
+                                title={`Télécharger slide ${i + 1}`}
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={s.imageData}
+                                  alt={`Slide ${i + 1}`}
+                                  style={{
+                                    width: "100%",
+                                    aspectRatio: "9 / 16",
+                                    objectFit: "cover",
+                                    borderRadius: 8,
+                                    border: `1px solid ${colors.border}`,
+                                  }}
+                                />
+                              </a>
+                            ) : null
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <CarouselViewer slides={slides} />
+                    )}
 
                     {c.caption && (
                       <p style={{ fontSize: 12, color: colors.texte, whiteSpace: "pre-wrap", marginTop: 10 }}>
