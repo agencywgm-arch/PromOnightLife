@@ -6,11 +6,13 @@ import { colors, btnGhost } from "@/lib/ui";
 export type Slide = {
   titre?: string;
   sousTitre?: string;
-  photoRef?: string | null; // Google Places (proxy /api/places/photo)
-  photoId?: string | null; // Unsplash legacy
+  photoRef?: string | null;
+  photoId?: string | null;
+  imageData?: string | null; // base64 JPEG rendu (stocké en DB)
 };
 
 function slideImageUrl(slide: Slide): string | null {
+  if (slide.imageData) return slide.imageData;
   if (slide.photoRef) {
     return `/api/places/photo?ref=${encodeURIComponent(slide.photoRef)}&maxwidth=800`;
   }

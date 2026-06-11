@@ -125,12 +125,18 @@ export async function createContenu(formData: FormData) {
   await prisma.contenu.create({
     data: {
       restaurant: String(formData.get("restaurant") || "").trim(),
+      adresse: String(formData.get("adresse") || "").trim() || null,
+      arrondissement: String(formData.get("arrondissement") || "").trim() || null,
+      horaires: String(formData.get("horaires") || "").trim() || null,
+      prix: String(formData.get("prix") || "").trim() || null,
+      cuisine: String(formData.get("cuisine") || "").trim() || null,
       scoreGlobal: parseInt(String(formData.get("scoreGlobal") || "0"), 10),
       scoreViral: parseInt(String(formData.get("scoreViral") || "0"), 10),
       scoreLuxe: parseInt(String(formData.get("scoreLuxe") || "0"), 10),
       slides: String(formData.get("slides") || "[]"),
       caption: String(formData.get("caption") || "").trim() || null,
       hashtags: String(formData.get("hashtags") || "").trim() || null,
+      platform: String(formData.get("platform") || "TIKTOK"),
     },
   });
   revalidatePath("/contenu");
@@ -141,7 +147,7 @@ export async function updateContenuStatut(id: string, statut: string) {
     where: { id },
     data: {
       statut,
-      publishedAt: statut === "PUBLIE" ? new Date() : null,
+      exportedAt: statut === "EXPORTE" ? new Date() : undefined,
     },
   });
   revalidatePath("/contenu");
@@ -150,6 +156,116 @@ export async function updateContenuStatut(id: string, statut: string) {
 export async function deleteContenu(id: string) {
   await prisma.contenu.delete({ where: { id } });
   revalidatePath("/contenu");
+}
+
+export async function publishToInstagram(
+  id: string
+): Promise<{ ok: boolean; message: string }> {
+  const token = process.env.META_ACCESS_TOKEN;
+  const igUserId = process.env.META_IG_USER_ID;
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
+
+  if (!token || !igUserId) {
+    return {
+      ok: false,
+      message:
+        "META_ACCESS_TOKEN et META_IG_USER_ID doivent être configurés dans les variables d'environnement.",
+    };
+  }
+  if (!siteUrl) {
+    return {
+      ok: false,
+      message:
+        "NEXT_PUBLIC_SITE_URL doit être défini (URL publique de l'app, ex: https://monapp.vercel.app).",
+    };
+  }
+
+  const contenu = await prisma.contenu.findUnique({ where: { id } });
+  if (!contenu) return { ok: false, message: "Contenu introuvable" };
+
+  let slides: { imageData?: string | null }[] = [];
+  try {
+    slides = JSON.parse(contenu.slides || "[]");
+  } catch {
+    return { ok: false, message: "Slides invalides" };
+  }
+
+  const slidesWithImage = slides.filter((s) => s.imageData);
+  if (slidesWithImage.length === 0) {
+    return {
+      ok: false,
+      message:
+        "Aucune image rendue. Ouvre le générateur, génère les slides, puis enregistre avant de publier.",
+    };
+  }
+
+  const base = `https://graph.facebook.com/v19.0`;
+
+  try {
+    if (slidesWithImage.length === 1) {
+      // Post simple (une seule image)
+      const imageUrl = `${siteUrl}/api/contenu/${id}/slide/0`;
+      const createRes = await fetch(
+        `${base}/${igUserId}/media?image_url=${encodeURIComponent(imageUrl)}&caption=${encodeURIComponent((contenu.caption || "") + "\n" + (contenu.hashtags || ""))}&access_token=${token}`,
+        { method: "POST", cache: "no-store" }
+      );
+      const createData = await createRes.json();
+      if (!createRes.ok || !createData.id) {
+        return { ok: false, message: `Erreur création média : ${createData?.error?.message || createRes.status}` };
+      }
+      const publishRes = await fetch(
+        `${base}/${igUserId}/media_publish?creation_id=${createData.id}&access_token=${token}`,
+        { method: "POST", cache: "no-store" }
+      );
+      const publishData = await publishRes.json();
+      if (!publishRes.ok) {
+        return { ok: false, message: `Erreur publication : ${publishData?.error?.message || publishRes.status}` };
+      }
+    } else {
+      // Carrousel (plusieurs images)
+      const childIds: string[] = [];
+      for (let i = 0; i < slidesWithImage.length; i++) {
+        const imageUrl = `${siteUrl}/api/contenu/${id}/slide/${i}`;
+        const res = await fetch(
+          `${base}/${igUserId}/media?image_url=${encodeURIComponent(imageUrl)}&is_carousel_item=true&access_token=${token}`,
+          { method: "POST", cache: "no-store" }
+        );
+        const data = await res.json();
+        if (!res.ok || !data.id) {
+          return { ok: false, message: `Erreur slide ${i + 1} : ${data?.error?.message || res.status}` };
+        }
+        childIds.push(data.id);
+      }
+      const caption = `${contenu.caption || ""}\n${contenu.hashtags || ""}`.trim();
+      const carouselRes = await fetch(
+        `${base}/${igUserId}/media?media_type=CAROUSEL&children=${childIds.join(",")}&caption=${encodeURIComponent(caption)}&access_token=${token}`,
+        { method: "POST", cache: "no-store" }
+      );
+      const carouselData = await carouselRes.json();
+      if (!carouselRes.ok || !carouselData.id) {
+        return { ok: false, message: `Erreur carrousel : ${carouselData?.error?.message || carouselRes.status}` };
+      }
+      const publishRes = await fetch(
+        `${base}/${igUserId}/media_publish?creation_id=${carouselData.id}&access_token=${token}`,
+        { method: "POST", cache: "no-store" }
+      );
+      const publishData = await publishRes.json();
+      if (!publishRes.ok) {
+        return { ok: false, message: `Erreur publication finale : ${publishData?.error?.message || publishRes.status}` };
+      }
+    }
+
+    await prisma.contenu.update({
+      where: { id },
+      data: { statut: "EXPORTE", exportedAt: new Date() },
+    });
+    revalidatePath("/contenu");
+    return { ok: true, message: "Publié sur Instagram ✓" };
+  } catch (e) {
+    return { ok: false, message: `Erreur réseau : ${e instanceof Error ? e.message : String(e)}` };
+  }
 }
 
 // ---------- AGENTS IA ----------

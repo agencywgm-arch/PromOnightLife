@@ -72,18 +72,24 @@ model StaffEvenement {
 }
 
 model Contenu {
-  id          String    @id @default(cuid())
-  restaurant  String
-  scoreGlobal Int       @default(0)
-  scoreViral  Int       @default(0)
-  scoreLuxe   Int       @default(0)
-  slides      String    @default("[]") // JSON string
-  caption     String?
-  hashtags    String?
-  statut      String    @default("EN_ATTENTE") // EN_ATTENTE | VALIDE | REFUSE | PUBLIE
-  publishedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  restaurant      String
+  adresse         String?
+  arrondissement  String?
+  horaires        String?
+  prix            String?
+  cuisine         String?
+  scoreGlobal     Int       @default(0)
+  scoreViral      Int       @default(0)
+  scoreLuxe       Int       @default(0)
+  slides          String    @default("[]") // JSON: [{titre,sousTitre,imageData,imageUrl,imageSrc,searchQuery}]
+  caption         String?
+  hashtags        String?
+  platform        String    @default("TIKTOK") // TIKTOK | INSTAGRAM
+  statut          String    @default("EN_ATTENTE") // EN_ATTENTE | VALIDE | EXPORTE | REFUSE
+  exportedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model AgentConfig {
