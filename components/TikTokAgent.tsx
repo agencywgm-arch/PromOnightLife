@@ -63,10 +63,11 @@ function SlidePicker({
   const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [provider, setProvider] = useState<string | null>(null); // foursquare | google | pexels
   const [error, setError] = useState<string | null>(null);
   const [customUrl, setCustomUrl] = useState("");
 
-  // Photos réelles du restaurant (Google Places ou Yelp)
+  // Photos réelles du restaurant (Foursquare ou Google Places)
   async function searchPlace() {
     setLoading(true);
     setError(null);
@@ -88,6 +89,7 @@ function SlidePicker({
           thumb: p.thumb,
         }))
       );
+      setProvider(data.provider || "place");
       setSearched(true);
     } finally {
       setLoading(false);
@@ -106,6 +108,7 @@ function SlidePicker({
       } else {
         setPhotos(data.photos || []);
       }
+      setProvider("pexels");
       setSearched(true);
     } finally {
       setLoading(false);
@@ -164,7 +167,26 @@ function SlidePicker({
       )}
 
       {searched && photos.length > 0 && (
-        <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+        <div style={{ display: "flex", gap: 8, marginTop: 6, alignItems: "center", flexWrap: "wrap" }}>
+          {provider && (
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                padding: "3px 10px",
+                borderRadius: 999,
+                background:
+                  provider === "pexels" ? "#0d2233" : "#1a2a12",
+                color: provider === "pexels" ? "#4ab3ff" : "#8ade4a",
+                border: `1px solid ${provider === "pexels" ? "#4ab3ff44" : "#8ade4a44"}`,
+              }}
+            >
+              {provider === "foursquare" && "📷 Vraies photos · Foursquare"}
+              {provider === "google" && "📷 Vraies photos · Google Maps"}
+              {provider === "pexels" && "🎨 Photos d'ambiance · Pexels"}
+              {provider === "place" && "📷 Vraies photos du lieu"}
+            </span>
+          )}
           <button onClick={searchPlace} disabled={loading} style={{ ...btnGhost, fontSize: 10, padding: "3px 8px" }}>
             📷 Photos du resto
           </button>
