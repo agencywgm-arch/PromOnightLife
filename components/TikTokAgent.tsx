@@ -110,14 +110,14 @@ function SlidePicker({
         setLoading(true);
         setError(null);
         try {
-          // Essaie d'abord les vraies photos du restaurant
-          const res = await fetch(
+          // 1. Essaie d'abord les vraies photos du restaurant (Foursquare/Google Places)
+          const placeRes = await fetch(
             `/api/images/place?name=${encodeURIComponent(restaurantNom)}&address=${encodeURIComponent(restaurantAdresse)}`
           );
-          const data = await res.json();
-          if (res.ok && (data.photos || []).length > 0) {
+          const placeData = await placeRes.json();
+          if (placeRes.ok && (placeData.photos || []).length > 0) {
             setPhotos(
-              data.photos.map((p: { src: string; thumb: string; source: string }, i: number) => ({
+              placeData.photos.map((p: { src: string; thumb: string; source: string }, i: number) => ({
                 id: i,
                 pageUrl: "",
                 photographer: p.source,
@@ -125,12 +125,30 @@ function SlidePicker({
                 thumb: p.thumb,
               }))
             );
-            setProvider(data.provider || "place");
+            setProvider(placeData.provider || "place");
             setSearched(true);
             return;
           }
 
-          // Pas de vraies photos → cherche ambiance automatiquement
+          // 2. Fallback TripAdvisor (vraies photos aussi)
+          const taRes = await fetch(`/api/images/tripadvisor?name=${encodeURIComponent(restaurantNom)}`);
+          const taData = await taRes.json();
+          if (taData.photos && taData.photos.length > 0) {
+            setPhotos(
+              taData.photos.map((p: any, i: number) => ({
+                id: i,
+                pageUrl: "",
+                photographer: p.source,
+                src: p.src,
+                thumb: p.thumb,
+              }))
+            );
+            setProvider("tripadvisor");
+            setSearched(true);
+            return;
+          }
+
+          // 3. Fallback photos d'ambiance (Pexels/Unsplash/Pixabay)
           const autoRes = await fetch(`/api/images/auto?q=${encodeURIComponent(slide.searchQuery)}`);
           const autoData = await autoRes.json();
           if (autoData.photos && autoData.photos.length > 0) {
@@ -210,6 +228,7 @@ function SlidePicker({
                 {provider === "foursquare" && "📷 Foursquare"}
                 {provider === "google" && "📷 Google Maps"}
                 {provider === "place" && "📷 Photos du lieu"}
+                {provider === "tripadvisor" && "🌟 TripAdvisor"}
                 {provider === "pexels" && "🎨 Pexels"}
                 {provider === "unsplash" && "🎨 Unsplash"}
                 {provider === "pixabay" && "🎨 Pixabay"}
