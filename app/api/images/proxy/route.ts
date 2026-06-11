@@ -4,11 +4,12 @@ export const dynamic = "force-dynamic";
 
 // Hôtes autorisés pour le proxy d'images (canvas crossOrigin)
 const ALLOWED_HOSTS = [
-  "yelpcdn.com",
-  "fl.yelpcdn.com",
+  "fastly.4sqi.net",      // Foursquare photos CDN
+  "pbs.twimg.com",        // Twitter/X (parfois utilisé par Foursquare)
   "images.pexels.com",
   "googleusercontent.com",
   "maps.googleapis.com",
+  "lh3.googleusercontent.com",
 ];
 
 export async function GET(req: NextRequest) {
