@@ -103,7 +103,7 @@ export async function seedDemoIfEmpty() {
     "Gigi Paris", "CoCo Paris", "Girafe", "Loulou", "Mun Paris",
     "Manko", "Matignon", "L'Avenue",
   ];
-  const statutsContenu = ["EN_ATTENTE", "VALIDE", "REFUSE", "PUBLIE"];
+  const statutsContenu = ["EN_ATTENTE", "VALIDE", "REFUSE", "EXPORTE"];
   for (let i = 0; i < restaurants.length; i++) {
     await prisma.contenu.create({
       data: {
@@ -119,7 +119,7 @@ export async function seedDemoIfEmpty() {
         caption: `✨ ${restaurants[i]} — le spot incontournable de Paris ✨`,
         hashtags: "#paris #nightlife #restaurant #parisfood",
         statut: statutsContenu[i % statutsContenu.length],
-        publishedAt: statutsContenu[i % statutsContenu.length] === "PUBLIE" ? new Date() : null,
+        platform: "TIKTOK",
       },
     });
   }

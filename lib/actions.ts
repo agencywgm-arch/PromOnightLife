@@ -125,12 +125,18 @@ export async function createContenu(formData: FormData) {
   await prisma.contenu.create({
     data: {
       restaurant: String(formData.get("restaurant") || "").trim(),
+      adresse: String(formData.get("adresse") || "").trim() || null,
+      arrondissement: String(formData.get("arrondissement") || "").trim() || null,
+      horaires: String(formData.get("horaires") || "").trim() || null,
+      prix: String(formData.get("prix") || "").trim() || null,
+      cuisine: String(formData.get("cuisine") || "").trim() || null,
       scoreGlobal: parseInt(String(formData.get("scoreGlobal") || "0"), 10),
       scoreViral: parseInt(String(formData.get("scoreViral") || "0"), 10),
       scoreLuxe: parseInt(String(formData.get("scoreLuxe") || "0"), 10),
       slides: String(formData.get("slides") || "[]"),
       caption: String(formData.get("caption") || "").trim() || null,
       hashtags: String(formData.get("hashtags") || "").trim() || null,
+      platform: String(formData.get("platform") || "TIKTOK"),
     },
   });
   revalidatePath("/contenu");
@@ -141,7 +147,7 @@ export async function updateContenuStatut(id: string, statut: string) {
     where: { id },
     data: {
       statut,
-      publishedAt: statut === "PUBLIE" ? new Date() : null,
+      exportedAt: statut === "EXPORTE" ? new Date() : undefined,
     },
   });
   revalidatePath("/contenu");
@@ -253,7 +259,7 @@ export async function publishToInstagram(
 
     await prisma.contenu.update({
       where: { id },
-      data: { statut: "PUBLIE", publishedAt: new Date() },
+      data: { statut: "EXPORTE", exportedAt: new Date() },
     });
     revalidatePath("/contenu");
     return { ok: true, message: "Publié sur Instagram ✓" };
