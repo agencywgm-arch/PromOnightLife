@@ -67,21 +67,47 @@ function SlidePicker({
   const [error, setError] = useState<string | null>(null);
   const [customUrl, setCustomUrl] = useState("");
 
-  // Photos réelles du restaurant (Foursquare ou Google Places)
+  // Photos réelles du restaurant : Foursquare/Google si configurés,
+  // sinon bascule automatiquement sur la recherche web (aucune clé requise)
   async function searchPlace() {
     setLoading(true);
     setError(null);
     try {
+      // 1. APIs lieux (si clés configurées)
       const res = await fetch(
         `/api/images/place?name=${encodeURIComponent(restaurantNom)}&address=${encodeURIComponent(restaurantAdresse)}`
       );
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Photos du lieu indisponibles");
+      if (res.ok && (data.photos || []).length > 0) {
+        setPhotos(
+          data.photos.map((p: { src: string; thumb: string; source: string }, i: number) => ({
+            id: i,
+            pageUrl: "",
+            photographer: p.source,
+            src: p.src,
+            thumb: p.thumb,
+          }))
+        );
+        setProvider(data.provider || "place");
+        setSearched(true);
+        return;
+      }
+
+      // 2. Fallback : recherche d'images web (DuckDuckGo, sans clé)
+      const webRes = await fetch(
+        `/api/images/web?q=${encodeURIComponent(`"${restaurantNom}" restaurant Paris`)}`
+      );
+      const webData = await webRes.json();
+      if (!webRes.ok) {
+        setError(webData.error || data.error || "Photos introuvables");
+        return;
+      }
+      if ((webData.photos || []).length === 0) {
+        setError(`Aucune photo trouvée pour « ${restaurantNom} ». Colle une URL d'image ci-dessous.`);
         return;
       }
       setPhotos(
-        (data.photos || []).map((p: { src: string; thumb: string; source: string }, i: number) => ({
+        webData.photos.map((p: { src: string; thumb: string; source: string }, i: number) => ({
           id: i,
           pageUrl: "",
           photographer: p.source,
@@ -89,7 +115,7 @@ function SlidePicker({
           thumb: p.thumb,
         }))
       );
-      setProvider(data.provider || "place");
+      setProvider("web");
       setSearched(true);
     } finally {
       setLoading(false);
@@ -185,6 +211,7 @@ function SlidePicker({
               {provider === "google" && "📷 Vraies photos · Google Maps"}
               {provider === "pexels" && "🎨 Photos d'ambiance · Pexels"}
               {provider === "place" && "📷 Vraies photos du lieu"}
+              {provider === "web" && "🌐 Photos du web · DuckDuckGo"}
             </span>
           )}
           <button onClick={searchPlace} disabled={loading} style={{ ...btnGhost, fontSize: 10, padding: "3px 8px" }}>
@@ -197,42 +224,22 @@ function SlidePicker({
       )}
 
       {fallbackUrl && (
-        <div style={{ marginTop: 8, fontSize: 12, color: colors.muted }}>
+        <p style={{ marginTop: 8, fontSize: 12, color: colors.muted }}>
           <a href={fallbackUrl} target="_blank" rel="noreferrer" style={{ color: colors.violet }}>
             Ouvre Pexels →
           </a>
-          {" "}copie l'URL directe de l'image puis colle-la ci-dessous.
-          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-            <input
-              value={customUrl}
-              onChange={(e) => setCustomUrl(e.target.value)}
-              placeholder="https://images.pexels.com/..."
-              style={{ ...input, fontSize: 11 }}
-            />
-            <button
-              onClick={() => {
-                if (customUrl.trim()) {
-                  onSelect(restaurantIndex, slideIndex, customUrl.trim(), "Pexels (manuel)");
-                  setCustomUrl("");
-                }
-              }}
-              disabled={!customUrl.trim()}
-              style={{ ...btnPrimary, fontSize: 11, whiteSpace: "nowrap" }}
-            >
-              Utiliser
-            </button>
-          </div>
-        </div>
+          {" "}copie l&apos;URL directe de l&apos;image puis colle-la ci-dessous.
+        </p>
       )}
 
       {photos.length > 0 && (
         <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
           {photos.map((p) => (
-            <div key={p.id} style={{ position: "relative" }}>
+            <div key={p.id} style={{ position: "relative", textAlign: "center" }}>
               <img
                 src={p.thumb}
                 alt=""
-                onClick={() => onSelect(restaurantIndex, slideIndex, p.src, `© ${p.photographer} / Pexels`)}
+                onClick={() => onSelect(restaurantIndex, slideIndex, p.src, `© ${p.photographer}`)}
                 style={{
                   width: 80,
                   height: 120,
@@ -245,10 +252,52 @@ function SlidePicker({
                       : "3px solid transparent",
                 }}
               />
+              <div
+                style={{
+                  fontSize: 8,
+                  color: colors.muted,
+                  maxWidth: 84,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+                title={p.photographer}
+              >
+                {p.photographer}
+              </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* URL manuelle toujours disponible (Google Maps, Instagram, site du resto…) */}
+      <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+        <input
+          value={customUrl}
+          onChange={(e) => setCustomUrl(e.target.value)}
+          placeholder="Ou colle l'URL d'une image (clic droit → copier l'adresse de l'image)"
+          style={{ ...input, fontSize: 11 }}
+        />
+        <button
+          onClick={() => {
+            const u = customUrl.trim();
+            if (u) {
+              // proxifiée pour le CORS canvas
+              onSelect(
+                restaurantIndex,
+                slideIndex,
+                `/api/images/proxy?url=${encodeURIComponent(u)}`,
+                "URL manuelle"
+              );
+              setCustomUrl("");
+            }
+          }}
+          disabled={!customUrl.trim()}
+          style={{ ...btnGhost, fontSize: 11, whiteSpace: "nowrap" }}
+        >
+          Utiliser
+        </button>
+      </div>
 
       {isSelected && slide.imageSrc && (
         <p style={{ fontSize: 10, color: colors.muted, margin: "4px 0 0" }}>{slide.imageSrc}</p>
