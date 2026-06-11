@@ -26,14 +26,25 @@ export async function GET(req: NextRequest) {
     // 1. Récupérer le token vqd de DuckDuckGo
     const tokenRes = await fetch(
       `https://duckduckgo.com/?q=${encodeURIComponent(q)}&iax=images&ia=images`,
-      { headers: { "User-Agent": UA } }
+      {
+        headers: {
+          "User-Agent": UA,
+          "Accept": "text/html,application/xhtml+xml",
+          "Accept-Language": "fr-FR,fr;q=0.9",
+        }
+      }
     );
     const html = await tokenRes.text();
-    const vqdMatch =
-      html.match(/vqd=["']?([\d-]+)["']?/) || html.match(/vqd=([\d-]+)/);
+
+    // Try multiple patterns to extract vqd token
+    let vqdMatch = html.match(/vqd=["']?([\da-f-]+)["']?/i)
+      || html.match(/vqd["\']?\s*[=:]\s*["\']?([\da-f-]+)/i)
+      || html.match(/["']vqd["']?\s*:\s*["']?([\da-f-]+)/);
+
     if (!vqdMatch) {
+      console.error("[web-images] Token extraction failed. HTML length:", html.length, "First 500 chars:", html.substring(0, 500));
       return NextResponse.json(
-        { error: "Recherche web indisponible (token)" },
+        { error: "Recherche web indisponible (token extraction failed)" },
         { status: 502 }
       );
     }
