@@ -31,22 +31,31 @@ export async function GET(req: NextRequest) {
           "User-Agent": UA,
           "Accept": "text/html,application/xhtml+xml",
           "Accept-Language": "fr-FR,fr;q=0.9",
+          "Cache-Control": "no-cache",
         }
       }
     );
     const html = await tokenRes.text();
 
-    // Try multiple patterns to extract vqd token
-    let vqdMatch = html.match(/vqd=["']?([\da-f-]+)["']?/i)
-      || html.match(/vqd["\']?\s*[=:]\s*["\']?([\da-f-]+)/i)
-      || html.match(/["']vqd["']?\s*:\s*["']?([\da-f-]+)/);
+    // Try multiple patterns to extract vqd token (more flexible)
+    let vqdMatch =
+      html.match(/vqd["\']?\s*[=:]\s*["\']?([\da-f-]+)/) ||
+      html.match(/vqd=(["\']?[\da-f-]+["\']?)/i) ||
+      html.match(/"vqd"\s*:\s*"([\da-f-]+)"/);
 
     if (!vqdMatch) {
-      console.error("[web-images] Token extraction failed. HTML length:", html.length, "First 500 chars:", html.substring(0, 500));
-      return NextResponse.json(
-        { error: "Recherche web indisponible (token extraction failed)" },
-        { status: 502 }
-      );
+      console.warn("[web-images] Token extraction failed for query:", q);
+      // Fallback: return a link-based response for user to search manually
+      const fallbackUrl = `https://duckduckgo.com/?q=${encodeURIComponent(q)}&iax=images&ia=images`;
+      const payload = {
+        provider: "web",
+        photos: [],
+        fallback: true,
+        searchUrl: fallbackUrl,
+        message: "Recherche automatique indisponible. Clique le lien ci-dessous pour chercher manuellement."
+      };
+      cache.set(q, { data: payload, expires: Date.now() + TTL });
+      return NextResponse.json(payload, { status: 200 });
     }
     const vqd = vqdMatch[1];
 
@@ -56,16 +65,24 @@ export async function GET(req: NextRequest) {
       {
         headers: {
           "User-Agent": UA,
-          Referer: "https://duckduckgo.com/",
+          "Referer": "https://duckduckgo.com/",
         },
       }
     );
     if (!imgRes.ok) {
-      return NextResponse.json(
-        { error: `Recherche web indisponible (${imgRes.status})` },
-        { status: 502 }
-      );
+      console.warn("[web-images] Image API returned:", imgRes.status);
+      // Also provide fallback for API errors
+      const fallbackUrl = `https://duckduckgo.com/?q=${encodeURIComponent(q)}&iax=images&ia=images`;
+      const payload = {
+        provider: "web",
+        photos: [],
+        fallback: true,
+        searchUrl: fallbackUrl,
+      };
+      cache.set(q, { data: payload, expires: Date.now() + TTL });
+      return NextResponse.json(payload, { status: 200 });
     }
+
     const data = await imgRes.json();
     const results: {
       image: string;
@@ -75,6 +92,18 @@ export async function GET(req: NextRequest) {
       width: number;
       height: number;
     }[] = data.results || [];
+
+    if (!results || results.length === 0) {
+      const fallbackUrl = `https://duckduckgo.com/?q=${encodeURIComponent(q)}&iax=images&ia=images`;
+      const payload = {
+        provider: "web",
+        photos: [],
+        fallback: true,
+        searchUrl: fallbackUrl,
+      };
+      cache.set(q, { data: payload, expires: Date.now() + TTL });
+      return NextResponse.json(payload, { status: 200 });
+    }
 
     const photos = results
       .filter((r) => r.image?.startsWith("https://") && r.width >= 500)
@@ -97,9 +126,18 @@ export async function GET(req: NextRequest) {
     cache.set(q, { data: payload, expires: Date.now() + TTL });
     return NextResponse.json(payload);
   } catch (e) {
+    console.error("[web-images] Error:", e);
+    // On error, provide fallback search URL
+    const q = new URL(req.url).searchParams.get("q") || "restaurant";
+    const fallbackUrl = `https://duckduckgo.com/?q=${encodeURIComponent(q)}&iax=images&ia=images`;
     return NextResponse.json(
-      { error: `Erreur réseau : ${e instanceof Error ? e.message : String(e)}` },
-      { status: 500 }
+      {
+        provider: "web",
+        photos: [],
+        fallback: true,
+        searchUrl: fallbackUrl,
+      },
+      { status: 200 }
     );
   }
 }

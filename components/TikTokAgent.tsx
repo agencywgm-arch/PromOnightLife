@@ -98,14 +98,46 @@ function SlidePicker({
         `/api/images/web?q=${encodeURIComponent(`"${restaurantNom}" restaurant Paris`)}`
       );
       const webData = await webRes.json();
-      if (!webRes.ok) {
-        setError(webData.error || data.error || "Photos introuvables");
+
+      // Handle fallback response (token extraction or API failure)
+      if (webData.fallback && webData.searchUrl) {
+        setError(
+          <>
+            Recherche automatique indisponible.{" "}
+            <a
+              href={webData.searchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "#4ab3ff", textDecoration: "underline" }}
+            >
+              Chercher manuellement sur DuckDuckGo
+            </a>
+            {" — puis colle l'URL d'une image ci-dessous."}
+          </>
+        );
+        setSearched(true);
         return;
       }
+
       if ((webData.photos || []).length === 0) {
-        setError(`Aucune photo trouvée pour « ${restaurantNom} ». Colle une URL d'image ci-dessous.`);
+        setError(
+          <>
+            Aucune photo trouvée pour « {restaurantNom} ».
+            <a
+              href={`https://duckduckgo.com/?q=${encodeURIComponent(`"${restaurantNom}" restaurant Paris`)}&iax=images&ia=images`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "#4ab3ff", textDecoration: "underline", marginLeft: 4 }}
+            >
+              Chercher sur DuckDuckGo
+            </a>
+            {" — puis colle l'URL d'une image ci-dessous."}
+          </>
+        );
+        setSearched(true);
         return;
       }
+
       setPhotos(
         webData.photos.map((p: { src: string; thumb: string; source: string }, i: number) => ({
           id: i,
