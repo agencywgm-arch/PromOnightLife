@@ -130,25 +130,7 @@ function SlidePicker({
             return;
           }
 
-          // 2. Fallback TripAdvisor (vraies photos aussi)
-          const taRes = await fetch(`/api/images/tripadvisor?name=${encodeURIComponent(restaurantNom)}`);
-          const taData = await taRes.json();
-          if (taData.photos && taData.photos.length > 0) {
-            setPhotos(
-              taData.photos.map((p: any, i: number) => ({
-                id: i,
-                pageUrl: "",
-                photographer: p.source,
-                src: p.src,
-                thumb: p.thumb,
-              }))
-            );
-            setProvider("tripadvisor");
-            setSearched(true);
-            return;
-          }
-
-          // 3. Fallback photos d'ambiance (Pexels/Unsplash/Pixabay)
+          // 2. Fallback photos d'ambiance (Pexels/Unsplash/Pixabay)
           const autoRes = await fetch(`/api/images/auto?q=${encodeURIComponent(slide.searchQuery)}`);
           const autoData = await autoRes.json();
           if (autoData.photos && autoData.photos.length > 0) {
