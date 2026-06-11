@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { createContenu } from "@/lib/actions";
 import { card, btnPrimary, btnGhost, input, colors } from "@/lib/ui";
 
@@ -47,21 +48,56 @@ function SlidePicker({
   slide,
   slideIndex,
   restaurantIndex,
+  restaurantNom,
+  restaurantAdresse,
   onSelect,
 }: {
   slide: AgentSlide;
   slideIndex: number;
   restaurantIndex: number;
+  restaurantNom: string;
+  restaurantAdresse: string;
   onSelect: (rIdx: number, sIdx: number, url: string, src: string) => void;
 }) {
   const [photos, setPhotos] = useState<PexelsPhoto[]>([]);
   const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [customUrl, setCustomUrl] = useState("");
 
-  async function search() {
+  // Photos réelles du restaurant (Google Places ou Yelp)
+  async function searchPlace() {
     setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/images/place?name=${encodeURIComponent(restaurantNom)}&address=${encodeURIComponent(restaurantAdresse)}`
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Photos du lieu indisponibles");
+        return;
+      }
+      setPhotos(
+        (data.photos || []).map((p: { src: string; thumb: string; source: string }, i: number) => ({
+          id: i,
+          pageUrl: "",
+          photographer: p.source,
+          src: p.src,
+          thumb: p.thumb,
+        }))
+      );
+      setSearched(true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Photos d'ambiance libres de droits (Pexels)
+  async function searchPexels() {
+    setLoading(true);
+    setError(null);
     try {
       const res = await fetch(`/api/images/pexels?q=${encodeURIComponent(slide.searchQuery)}`);
       const data = await res.json();
@@ -105,13 +141,37 @@ function SlidePicker({
       </div>
 
       {!searched && (
-        <button
-          onClick={search}
-          disabled={loading}
-          style={{ ...btnGhost, fontSize: 11, marginTop: 8 }}
-        >
-          {loading ? "Recherche…" : `🔍 Chercher "${slide.searchQuery}"`}
-        </button>
+        <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+          <button
+            onClick={searchPlace}
+            disabled={loading}
+            style={{ ...btnPrimary, fontSize: 11 }}
+          >
+            {loading ? "Recherche…" : "📷 Vraies photos du restaurant"}
+          </button>
+          <button
+            onClick={searchPexels}
+            disabled={loading}
+            style={{ ...btnGhost, fontSize: 11 }}
+          >
+            🎨 Ambiance (Pexels)
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <p style={{ fontSize: 12, color: colors.rouge, margin: "8px 0 0" }}>{error}</p>
+      )}
+
+      {searched && photos.length > 0 && (
+        <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+          <button onClick={searchPlace} disabled={loading} style={{ ...btnGhost, fontSize: 10, padding: "3px 8px" }}>
+            📷 Photos du resto
+          </button>
+          <button onClick={searchPexels} disabled={loading} style={{ ...btnGhost, fontSize: 10, padding: "3px 8px" }}>
+            🎨 Pexels
+          </button>
+        </div>
       )}
 
       {fallbackUrl && (
@@ -335,6 +395,7 @@ export default function TikTokAgent() {
   const [composing, setComposing] = useState<number | null>(null);
   const [saved, setSaved] = useState<Record<number, boolean>>({});
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const router = useRouter();
 
   const hasApiKey = true; // vérifié côté serveur — l'erreur revient dans la réponse
 
@@ -407,6 +468,9 @@ export default function TikTokAgent() {
       fd.set("scoreLuxe", "75");
       await createContenu(fd);
       setSaved((prev) => ({ ...prev, [rIdx]: true }));
+      // Rafraîchit la page serveur : le contenu composé apparaît
+      // immédiatement dans la bibliothèque en dessous
+      router.refresh();
 
       // Télécharger les slides en ZIP-like (téléchargements séquentiels)
       rendered.forEach((slide, i) => {
@@ -580,6 +644,8 @@ export default function TikTokAgent() {
                   slide={slide}
                   slideIndex={sIdx}
                   restaurantIndex={rIdx}
+                  restaurantNom={r.nom}
+                  restaurantAdresse={r.adresse}
                   onSelect={selectImage}
                 />
               ))}
