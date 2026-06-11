@@ -67,6 +67,7 @@ function SlidePicker({
   const [error, setError] = useState<ReactNode | null>(null);
   const [customUrl, setCustomUrl] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [previewPhoto, setPreviewPhoto] = useState<PexelsPhoto | null>(null);
 
   const googleImagesUrl = `https://www.google.com/search?q=${encodeURIComponent(`"${restaurantNom}" restaurant Paris`)}&tbm=isch&hl=fr`;
 
@@ -220,9 +221,11 @@ function SlidePicker({
             {photos.map((p) => (
               <div key={p.id} style={{ textAlign: "center" }}>
                 <img src={p.thumb} alt=""
-                  onClick={() => onSelect(restaurantIndex, slideIndex, p.src, `© ${p.photographer}`)}
+                  onClick={() => setPreviewPhoto(p)}
                   style={{ width: 80, height: 120, objectFit: "cover", borderRadius: 6, cursor: "pointer",
-                    border: slide.imageUrl === p.src ? `3px solid ${colors.violet}` : "3px solid transparent" }} />
+                    border: slide.imageUrl === p.src ? `3px solid ${colors.violet}` : "3px solid transparent",
+                    transition: "transform 0.2s, box-shadow 0.2s",
+                    boxShadow: previewPhoto?.id === p.id ? `0 0 12px ${colors.violet}` : "none" }} />
                 <div style={{ fontSize: 8, color: colors.muted, maxWidth: 84, overflow: "hidden",
                   textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={p.photographer}>
                   {p.photographer}
@@ -286,6 +289,75 @@ function SlidePicker({
 
       {isSelected && slide.imageSrc && (
         <p style={{ fontSize: 10, color: colors.muted, margin: "4px 0 0" }}>{slide.imageSrc}</p>
+      )}
+
+      {/* Modal Preview — affichage plein écran de l'image sélectionnée */}
+      {previewPhoto && (
+        <div
+          onClick={() => setPreviewPhoto(null)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.9)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "relative",
+              maxWidth: "90vw",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+            }}
+          >
+            <img
+              src={previewPhoto.src}
+              alt="Preview"
+              style={{
+                maxWidth: "100%",
+                maxHeight: "70vh",
+                objectFit: "contain",
+                borderRadius: 8,
+              }}
+            />
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+              <button
+                onClick={() => {
+                  onSelect(restaurantIndex, slideIndex, previewPhoto.src, `© ${previewPhoto.photographer}`);
+                  setPreviewPhoto(null);
+                }}
+                style={{
+                  ...btnPrimary,
+                  fontSize: 12,
+                }}
+              >
+                ✓ Sélectionner cette image
+              </button>
+              <button
+                onClick={() => setPreviewPhoto(null)}
+                style={{
+                  ...btnGhost,
+                  fontSize: 12,
+                }}
+              >
+                ✕ Fermer
+              </button>
+            </div>
+            <div style={{ fontSize: 11, color: colors.muted, textAlign: "center" }}>
+              {previewPhoto.photographer}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
