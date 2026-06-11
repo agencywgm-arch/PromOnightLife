@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { createContenu } from "@/lib/actions";
 import { card, btnPrimary, btnGhost, input, colors } from "@/lib/ui";
@@ -64,9 +64,10 @@ function SlidePicker({
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [provider, setProvider] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ReactNode | null>(null);
   const [customUrl, setCustomUrl] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [previewPhoto, setPreviewPhoto] = useState<PexelsPhoto | null>(null);
 
   const googleImagesUrl = `https://www.google.com/search?q=${encodeURIComponent(`"${restaurantNom}" restaurant Paris`)}&tbm=isch&hl=fr`;
 
@@ -74,6 +75,7 @@ function SlidePicker({
     setLoading(true);
     setError(null);
     try {
+      // APIs lieux (Foursquare/Google Places si clés configurées)
       const res = await fetch(
         `/api/images/place?name=${encodeURIComponent(restaurantNom)}&address=${encodeURIComponent(restaurantAdresse)}`
       );
@@ -101,24 +103,58 @@ function SlidePicker({
     }
   }
 
-  // Photos d'ambiance libres de droits (Pexels)
-  async function searchPexels() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/images/pexels?q=${encodeURIComponent(slide.searchQuery)}`);
-      const data = await res.json();
-      if (data.fallback) {
-        setFallbackUrl(data.searchUrl);
-      } else {
-        setPhotos(data.photos || []);
-      }
-      setProvider("pexels");
-      setSearched(true);
-    } finally {
-      setLoading(false);
+  // Auto-search: déclenche les recherches à montage du composant
+  useEffect(() => {
+    if (!searched && slide.searchQuery) {
+      const autoSearch = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          // Essaie d'abord les vraies photos du restaurant
+          const res = await fetch(
+            `/api/images/place?name=${encodeURIComponent(restaurantNom)}&address=${encodeURIComponent(restaurantAdresse)}`
+          );
+          const data = await res.json();
+          if (res.ok && (data.photos || []).length > 0) {
+            setPhotos(
+              data.photos.map((p: { src: string; thumb: string; source: string }, i: number) => ({
+                id: i,
+                pageUrl: "",
+                photographer: p.source,
+                src: p.src,
+                thumb: p.thumb,
+              }))
+            );
+            setProvider(data.provider || "place");
+            setSearched(true);
+            return;
+          }
+
+          // Pas de vraies photos → cherche ambiance automatiquement
+          const autoRes = await fetch(`/api/images/auto?q=${encodeURIComponent(slide.searchQuery)}`);
+          const autoData = await autoRes.json();
+          if (autoData.photos && autoData.photos.length > 0) {
+            setPhotos(
+              autoData.photos.map((p: any, i: number) => ({
+                id: i,
+                pageUrl: p.pageUrl || "",
+                photographer: p.source,
+                src: p.src,
+                thumb: p.thumb,
+              }))
+            );
+            setProvider(autoData.provider || "auto");
+          } else {
+            setFallbackUrl(`https://www.pexels.com/search/${encodeURIComponent(slide.searchQuery)}/`);
+          }
+        } finally {
+          setSearched(true);
+          setLoading(false);
+        }
+      };
+      autoSearch();
     }
-  }
+  }, [slide.searchQuery, restaurantNom, restaurantAdresse]);
 
   const isSelected = !!slide.imageUrl;
 
@@ -149,21 +185,8 @@ function SlidePicker({
       </div>
 
       {!searched && (
-        <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-          <button
-            onClick={searchPlace}
-            disabled={loading}
-            style={{ ...btnPrimary, fontSize: 11 }}
-          >
-            {loading ? "Recherche…" : "📷 Vraies photos du restaurant"}
-          </button>
-          <button
-            onClick={searchPexels}
-            disabled={loading}
-            style={{ ...btnGhost, fontSize: 11 }}
-          >
-            🎨 Ambiance (Pexels)
-          </button>
+        <div style={{ marginTop: 8, fontSize: 12, color: colors.muted }}>
+          🔍 Recherche d'images en cours…
         </div>
       )}
 
@@ -171,124 +194,89 @@ function SlidePicker({
         <p style={{ fontSize: 12, color: colors.rouge, margin: "8px 0 0" }}>{error}</p>
       )}
 
-      {searched && photos.length > 0 && (
-        <div style={{ display: "flex", gap: 8, marginTop: 6, alignItems: "center", flexWrap: "wrap" }}>
-          {provider && (
-            <span
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                padding: "3px 10px",
-                borderRadius: 999,
+      {/* Photos trouvées via API */}
+      {photos.length > 0 && (
+        <>
+          <div style={{ display: "flex", gap: 8, marginTop: 6, alignItems: "center", flexWrap: "wrap" }}>
+            {provider && (
+              <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 999,
                 background:
-                  provider === "pexels" ? "#0d2233" : "#1a2a12",
-                color: provider === "pexels" ? "#4ab3ff" : "#8ade4a",
-                border: `1px solid ${provider === "pexels" ? "#4ab3ff44" : "#8ade4a44"}`,
-              }}
-            >
-              {provider === "foursquare" && "📷 Vraies photos · Foursquare"}
-              {provider === "google" && "📷 Vraies photos · Google Maps"}
-              {provider === "pexels" && "🎨 Photos d'ambiance · Pexels"}
-              {provider === "place" && "📷 Vraies photos du lieu"}
-              {provider === "web" && "🌐 Photos du web · DuckDuckGo"}
-            </span>
-          )}
-          <button onClick={searchPlace} disabled={loading} style={{ ...btnGhost, fontSize: 10, padding: "3px 8px" }}>
-            📷 Photos du resto
-          </button>
-          <button onClick={searchPexels} disabled={loading} style={{ ...btnGhost, fontSize: 10, padding: "3px 8px" }}>
-            🎨 Pexels
-          </button>
-        </div>
+                  provider === "foursquare" || provider === "google" || provider === "place" ? "#1a2a12" : "#0d2233",
+                color:
+                  provider === "foursquare" || provider === "google" || provider === "place" ? "#8ade4a" : "#4ab3ff",
+                border: `1px solid ${
+                  provider === "foursquare" || provider === "google" || provider === "place" ? "#8ade4a44" : "#4ab3ff44"
+                }` }}>
+                {provider === "foursquare" && "📷 Foursquare"}
+                {provider === "google" && "📷 Google Maps"}
+                {provider === "place" && "📷 Photos du lieu"}
+                {provider === "pexels" && "🎨 Pexels"}
+                {provider === "unsplash" && "🎨 Unsplash"}
+                {provider === "pixabay" && "🎨 Pixabay"}
+                {provider === "auto" && "🔄 Auto (Pexels/Unsplash/Pixabay)"}
+              </span>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+            {photos.map((p) => (
+              <div key={p.id} style={{ textAlign: "center" }}>
+                <img src={p.thumb} alt=""
+                  onClick={() => setPreviewPhoto(p)}
+                  style={{ width: 80, height: 120, objectFit: "cover", borderRadius: 6, cursor: "pointer",
+                    border: slide.imageUrl === p.src ? `3px solid ${colors.violet}` : "3px solid transparent",
+                    transition: "transform 0.2s, box-shadow 0.2s",
+                    boxShadow: previewPhoto?.id === p.id ? `0 0 12px ${colors.violet}` : "none" }} />
+                <div style={{ fontSize: 8, color: colors.muted, maxWidth: 84, overflow: "hidden",
+                  textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={p.photographer}>
+                  {p.photographer}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
-      {/* Panel recherche manuelle — s'affiche quand aucune API n'a trouvé de photos */}
-      {showSearch && photos.length === 0 && (
+      {/* Fallback: si aucune image trouvée après recherche auto, propose un lien de secours */}
+      {searched && photos.length === 0 && (
         <div style={{ marginTop: 10, padding: 12, background: "#0d0d1a", borderRadius: 8, border: "1px solid #2a1a4a" }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: colors.texte, marginBottom: 8 }}>
-            📷 Cherche une photo pour ce slide
+            ⚠️ Pas d'images trouvées automatiquement
           </div>
           <div style={{ fontSize: 11, color: colors.muted, marginBottom: 10, lineHeight: 1.5 }}>
-            Google bloque les recherches automatiques depuis les serveurs. Voici comment faire en 10 secondes :
+            Essaie une recherche Google directe ou fournis une URL d'image ci-dessous.
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <a href={googleImagesUrl} target="_blank" rel="noopener noreferrer"
-              style={{ ...btnPrimary, fontSize: 11, textAlign: "center", textDecoration: "none", display: "block" }}>
-              🔍 Ouvrir Google Images → "{restaurantNom}"
-            </a>
-            <div style={{ fontSize: 11, color: colors.muted, lineHeight: 1.5 }}>
-              Sur Google Images : clique sur une photo → <strong style={{ color: colors.texte }}>clic droit</strong> sur l'image agrandie → <strong style={{ color: colors.texte }}>"Copier l'adresse de l'image"</strong> → colle ci-dessous
-            </div>
-          </div>
+          <a href={googleImagesUrl} target="_blank" rel="noopener noreferrer"
+            style={{ ...btnGhost, fontSize: 11, textAlign: "center", textDecoration: "none", display: "block" }}>
+            🔍 Google Images
+          </a>
         </div>
       )}
 
-      {fallbackUrl && (
+      {/* Fallback search link */}
+      {fallbackUrl && photos.length === 0 && (
         <p style={{ marginTop: 8, fontSize: 12, color: colors.muted }}>
+          Ou cherche directement sur{" "}
           <a href={fallbackUrl} target="_blank" rel="noreferrer" style={{ color: colors.violet }}>
-            Ouvre Pexels →
-          </a>
-          {" "}copie l&apos;URL directe de l&apos;image puis colle-la ci-dessous.
+            Pexels →
+          </a>{" "}
+          copie l&apos;URL de l&apos;image et colle-la ci-dessous.
         </p>
       )}
 
-      {photos.length > 0 && (
-        <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-          {photos.map((p) => (
-            <div key={p.id} style={{ position: "relative", textAlign: "center" }}>
-              <img
-                src={p.thumb}
-                alt=""
-                onClick={() => onSelect(restaurantIndex, slideIndex, p.src, `© ${p.photographer}`)}
-                style={{
-                  width: 80,
-                  height: 120,
-                  objectFit: "cover",
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  border:
-                    slide.imageUrl === p.src
-                      ? `3px solid ${colors.violet}`
-                      : "3px solid transparent",
-                }}
-              />
-              <div
-                style={{
-                  fontSize: 8,
-                  color: colors.muted,
-                  maxWidth: 84,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-                title={p.photographer}
-              >
-                {p.photographer}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* URL manuelle toujours disponible (Google Maps, Instagram, site du resto…) */}
+      {/* URL manuelle — toujours disponible */}
       <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
         <input
           value={customUrl}
           onChange={(e) => setCustomUrl(e.target.value)}
-          placeholder="Ou colle l'URL d'une image (clic droit → copier l'adresse de l'image)"
+          placeholder="Colle ici l'URL de l'image (clic droit → copier l'adresse de l'image)"
           style={{ ...input, fontSize: 11 }}
         />
         <button
           onClick={() => {
             const u = customUrl.trim();
             if (u) {
-              // proxifiée pour le CORS canvas
-              onSelect(
-                restaurantIndex,
-                slideIndex,
-                `/api/images/proxy?url=${encodeURIComponent(u)}`,
-                "URL manuelle"
-              );
+              onSelect(restaurantIndex, slideIndex,
+                `/api/images/proxy?url=${encodeURIComponent(u)}`, "URL manuelle");
               setCustomUrl("");
             }
           }}
@@ -301,6 +289,75 @@ function SlidePicker({
 
       {isSelected && slide.imageSrc && (
         <p style={{ fontSize: 10, color: colors.muted, margin: "4px 0 0" }}>{slide.imageSrc}</p>
+      )}
+
+      {/* Modal Preview — affichage plein écran de l'image sélectionnée */}
+      {previewPhoto && (
+        <div
+          onClick={() => setPreviewPhoto(null)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.9)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "relative",
+              maxWidth: "90vw",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+            }}
+          >
+            <img
+              src={previewPhoto.src}
+              alt="Preview"
+              style={{
+                maxWidth: "100%",
+                maxHeight: "70vh",
+                objectFit: "contain",
+                borderRadius: 8,
+              }}
+            />
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+              <button
+                onClick={() => {
+                  onSelect(restaurantIndex, slideIndex, previewPhoto.src, `© ${previewPhoto.photographer}`);
+                  setPreviewPhoto(null);
+                }}
+                style={{
+                  ...btnPrimary,
+                  fontSize: 12,
+                }}
+              >
+                ✓ Sélectionner cette image
+              </button>
+              <button
+                onClick={() => setPreviewPhoto(null)}
+                style={{
+                  ...btnGhost,
+                  fontSize: 12,
+                }}
+              >
+                ✕ Fermer
+              </button>
+            </div>
+            <div style={{ fontSize: 11, color: colors.muted, textAlign: "center" }}>
+              {previewPhoto.photographer}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
