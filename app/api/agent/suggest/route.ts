@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -73,7 +74,21 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const historique: string[] = body.historique || [];
+
+  // Historique persistant : tous les restaurants déjà en bibliothèque (base)
+  // + ceux proposés dans la session en cours (pas encore composés/sauvegardés)
+  let enBase: string[] = [];
+  try {
+    const rows = await prisma.contenu.findMany({
+      select: { restaurant: true },
+      distinct: ["restaurant"],
+    });
+    enBase = rows.map((r) => r.restaurant);
+  } catch (e) {
+    console.error("[agent] lecture historique impossible :", e);
+  }
+  const session: string[] = body.historique || [];
+  const historique = Array.from(new Set([...enBase, ...session]));
   const date = new Date().toLocaleDateString("fr-FR", {
     weekday: "long",
     year: "numeric",
