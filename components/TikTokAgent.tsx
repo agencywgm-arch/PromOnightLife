@@ -99,35 +99,62 @@ function SlidePicker({
       );
       const webData = await webRes.json();
 
-      // Handle fallback response (token extraction or API failure)
-      if (webData.fallback && webData.searchUrl) {
-        setError(
-          <>
-            {webData.message || "Recherche automatique indisponible."}{" "}
-            <a
-              href={webData.searchUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "#4ab3ff", textDecoration: "underline" }}
-            >
-              Chercher sur Google Images
-            </a>
-            {webData.searchUrlAlt && (
-              <>
-                {" · "}
-                <a
-                  href={webData.searchUrlAlt}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: "#4ab3ff", textDecoration: "underline" }}
-                >
-                  DuckDuckGo
-                </a>
-              </>
-            )}
-            {" — puis colle l'URL d'une image ci-dessous."}
-          </>
-        );
+      // Aucune source configurée → guide d'activation de Brave API
+      if (webData.fallback) {
+        if (webData.noProvider) {
+          setError(
+            <>
+              <strong style={{ display: "block", marginBottom: 6 }}>
+                Configure Brave Search pour la recherche automatique de photos (gratuit, 2 min) :
+              </strong>
+              1) Va sur{" "}
+              <a
+                href="https://brave.com/search/api/"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "#4ab3ff", textDecoration: "underline" }}
+              >
+                brave.com/search/api
+              </a>{" "}
+              → clique <strong>"Get Started for Free"</strong> → inscris-toi avec ton email (sans carte)
+              <br />
+              2) Crée une clé API, copie-la
+              <br />
+              3) Dans Vercel → Settings → Env Variables → ajoute{" "}
+              <code style={{ background: "#1a1a2e", padding: "1px 5px", borderRadius: 3 }}>
+                BRAVE_API_KEY
+              </code>{" "}
+              avec ta clé → redéploie
+              <br />
+              <br />
+              En attendant :{" "}
+              <a
+                href={webData.searchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "#4ab3ff", textDecoration: "underline" }}
+              >
+                Cherche la photo sur Google Images
+              </a>
+              {" "}puis colle l'URL ci-dessous.
+            </>
+          );
+        } else {
+          setError(
+            <>
+              Aucune photo trouvée automatiquement.{" "}
+              <a
+                href={webData.searchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "#4ab3ff", textDecoration: "underline" }}
+              >
+                Chercher sur Google Images
+              </a>
+              {" — puis colle l'URL d'une image ci-dessous."}
+            </>
+          );
+        }
         setSearched(true);
         return;
       }
@@ -135,14 +162,14 @@ function SlidePicker({
       if ((webData.photos || []).length === 0) {
         setError(
           <>
-            Aucune photo trouvée pour « {restaurantNom} ».
+            Aucune photo trouvée pour « {restaurantNom} ».{" "}
             <a
-              href={`https://duckduckgo.com/?q=${encodeURIComponent(`"${restaurantNom}" restaurant Paris`)}&iax=images&ia=images`}
+              href={`https://www.google.com/search?q=${encodeURIComponent(`"${restaurantNom}" restaurant Paris`)}&tbm=isch`}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: "#4ab3ff", textDecoration: "underline", marginLeft: 4 }}
+              style={{ color: "#4ab3ff", textDecoration: "underline" }}
             >
-              Chercher sur DuckDuckGo
+              Chercher sur Google Images
             </a>
             {" — puis colle l'URL d'une image ci-dessous."}
           </>
