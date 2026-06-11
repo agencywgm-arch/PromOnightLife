@@ -217,43 +217,76 @@ async function composeSlide(slide: AgentSlide, canvas: HTMLCanvasElement): Promi
   ctx.fillStyle = grad;
   ctx.fillRect(0, H * 0.5, W, H * 0.5);
 
-  // Bulle blanche avec texte
+  // ── Bulles texte ancrées par le bas ──────────────────────────
   const bubbleX = 60;
-  const bubbleY = H * 0.72;
   const bubbleW = W - 120;
+  const MARGIN_BOT = 72;   // marge basse du canvas
+  const GAP = 14;          // espace entre les deux bulles
 
-  // Titre
+  const titleSize = slide.titre
+    ? slide.titre.length > 50 ? 48 : slide.titre.length > 30 ? 56 : 64
+    : 0;
+  const lineHT = titleSize * 1.35;
+  const stSize = 40;
+  const lineHST = stSize * 1.35;
+  const PAD = 28; // padding vertical dans les bulles
+
+  // 1. Calcul des hauteurs (nécessite de set la font avant wrapText)
+  let titleLines: string[] = [];
+  let stLines: string[] = [];
+  let titleBH = 0;
+  let stBH = 0;
+
+  if (slide.sousTitre) {
+    ctx.font = `500 ${stSize}px -apple-system, Arial, sans-serif`;
+    stLines = wrapText(ctx, slide.sousTitre, bubbleW - 56);
+    stBH = stLines.length * lineHST + PAD;
+  }
   if (slide.titre) {
-    ctx.save();
-    ctx.fillStyle = "rgba(255,255,255,0.95)";
-    const titleSize = slide.titre.length > 40 ? 52 : 64;
     ctx.font = `bold ${titleSize}px -apple-system, Arial, sans-serif`;
-    // Bulle titre
-    const titleLines = wrapText(ctx, slide.titre, bubbleW - 48);
-    const lineH = titleSize * 1.3;
-    const bH = titleLines.length * lineH + 36;
-    roundRect(ctx, bubbleX, bubbleY - bH - 20, bubbleW, bH + 20, 20);
+    titleLines = wrapText(ctx, slide.titre, bubbleW - 56);
+    titleBH = titleLines.length * lineHT + PAD;
+  }
+
+  // 2. Y de départ : on part du bas et on remonte
+  // Ordre rendu (bas → haut) : sous-titre, titre
+  const stTop = H - MARGIN_BOT - stBH;
+  const titleTop = stBH > 0 ? stTop - GAP - titleBH : H - MARGIN_BOT - titleBH;
+
+  // 3. Rendu sous-titre
+  if (slide.sousTitre && stBH > 0) {
+    ctx.save();
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    roundRect(ctx, bubbleX, stTop, bubbleW, stBH, 16);
     ctx.fill();
-    ctx.fillStyle = "#111";
-    titleLines.forEach((line, i) => {
-      ctx.fillText(line, bubbleX + 24, bubbleY - bH + 8 + (i + 1) * lineH - 10, bubbleW - 48);
+    ctx.fillStyle = "#1a1a1a";
+    ctx.font = `500 ${stSize}px -apple-system, Arial, sans-serif`;
+    stLines.forEach((line, i) => {
+      ctx.fillText(
+        line,
+        bubbleX + 28,
+        stTop + PAD / 2 + (i + 1) * lineHST - lineHST * 0.25,
+        bubbleW - 56
+      );
     });
     ctx.restore();
   }
 
-  // Sous-titre
-  if (slide.sousTitre) {
+  // 4. Rendu titre
+  if (slide.titre && titleBH > 0) {
     ctx.save();
-    ctx.font = `500 40px -apple-system, Arial, sans-serif`;
-    const stLines = wrapText(ctx, slide.sousTitre, bubbleW - 48);
-    const lineH2 = 52;
-    const bH2 = stLines.length * lineH2 + 28;
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    roundRect(ctx, bubbleX, bubbleY + 12, bubbleW, bH2, 16);
+    ctx.fillStyle = "rgba(255,255,255,0.97)";
+    roundRect(ctx, bubbleX, titleTop, bubbleW, titleBH, 20);
     ctx.fill();
-    ctx.fillStyle = "#222";
-    stLines.forEach((line, i) => {
-      ctx.fillText(line, bubbleX + 24, bubbleY + 12 + 28 + i * lineH2, bubbleW - 48);
+    ctx.fillStyle = "#0d0d0d";
+    ctx.font = `bold ${titleSize}px -apple-system, Arial, sans-serif`;
+    titleLines.forEach((line, i) => {
+      ctx.fillText(
+        line,
+        bubbleX + 28,
+        titleTop + PAD / 2 + (i + 1) * lineHT - lineHT * 0.25,
+        bubbleW - 56
+      );
     });
     ctx.restore();
   }
