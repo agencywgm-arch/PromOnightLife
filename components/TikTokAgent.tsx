@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, type ReactNode } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { createContenu } from "@/lib/actions";
 import { card, btnPrimary, btnGhost, input, colors } from "@/lib/ui";
@@ -102,24 +102,58 @@ function SlidePicker({
     }
   }
 
-  // Photos d'ambiance libres de droits (Pexels)
-  async function searchPexels() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/images/pexels?q=${encodeURIComponent(slide.searchQuery)}`);
-      const data = await res.json();
-      if (data.fallback) {
-        setFallbackUrl(data.searchUrl);
-      } else {
-        setPhotos(data.photos || []);
-      }
-      setProvider("pexels");
-      setSearched(true);
-    } finally {
-      setLoading(false);
+  // Auto-search: déclenche les recherches à montage du composant
+  useEffect(() => {
+    if (!searched && slide.searchQuery) {
+      const autoSearch = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          // Essaie d'abord les vraies photos du restaurant
+          const res = await fetch(
+            `/api/images/place?name=${encodeURIComponent(restaurantNom)}&address=${encodeURIComponent(restaurantAdresse)}`
+          );
+          const data = await res.json();
+          if (res.ok && (data.photos || []).length > 0) {
+            setPhotos(
+              data.photos.map((p: { src: string; thumb: string; source: string }, i: number) => ({
+                id: i,
+                pageUrl: "",
+                photographer: p.source,
+                src: p.src,
+                thumb: p.thumb,
+              }))
+            );
+            setProvider(data.provider || "place");
+            setSearched(true);
+            return;
+          }
+
+          // Pas de vraies photos → cherche ambiance automatiquement
+          const autoRes = await fetch(`/api/images/auto?q=${encodeURIComponent(slide.searchQuery)}`);
+          const autoData = await autoRes.json();
+          if (autoData.photos && autoData.photos.length > 0) {
+            setPhotos(
+              autoData.photos.map((p: any, i: number) => ({
+                id: i,
+                pageUrl: p.pageUrl || "",
+                photographer: p.source,
+                src: p.src,
+                thumb: p.thumb,
+              }))
+            );
+            setProvider(autoData.provider || "auto");
+          } else {
+            setFallbackUrl(`https://www.pexels.com/search/${encodeURIComponent(slide.searchQuery)}/`);
+          }
+        } finally {
+          setSearched(true);
+          setLoading(false);
+        }
+      };
+      autoSearch();
     }
-  }
+  }, [slide.searchQuery, restaurantNom, restaurantAdresse]);
 
   const isSelected = !!slide.imageUrl;
 
@@ -150,21 +184,8 @@ function SlidePicker({
       </div>
 
       {!searched && (
-        <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-          <button
-            onClick={searchPlace}
-            disabled={loading}
-            style={{ ...btnPrimary, fontSize: 11 }}
-          >
-            {loading ? "Recherche…" : "📷 Vraies photos du restaurant"}
-          </button>
-          <button
-            onClick={searchPexels}
-            disabled={loading}
-            style={{ ...btnGhost, fontSize: 11 }}
-          >
-            🎨 Ambiance (Pexels)
-          </button>
+        <div style={{ marginTop: 8, fontSize: 12, color: colors.muted }}>
+          🔍 Recherche d'images en cours…
         </div>
       )}
 
@@ -178,15 +199,20 @@ function SlidePicker({
           <div style={{ display: "flex", gap: 8, marginTop: 6, alignItems: "center", flexWrap: "wrap" }}>
             {provider && (
               <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 999,
-                background: provider === "pexels" ? "#0d2233" : "#1a2a12",
-                color: provider === "pexels" ? "#4ab3ff" : "#8ade4a",
-                border: `1px solid ${provider === "pexels" ? "#4ab3ff44" : "#8ade4a44"}` }}>
+                background:
+                  provider === "foursquare" || provider === "google" || provider === "place" ? "#1a2a12" : "#0d2233",
+                color:
+                  provider === "foursquare" || provider === "google" || provider === "place" ? "#8ade4a" : "#4ab3ff",
+                border: `1px solid ${
+                  provider === "foursquare" || provider === "google" || provider === "place" ? "#8ade4a44" : "#4ab3ff44"
+                }` }}>
                 {provider === "foursquare" && "📷 Foursquare"}
                 {provider === "google" && "📷 Google Maps"}
-                {provider === "pexels" && "🎨 Pexels"}
                 {provider === "place" && "📷 Photos du lieu"}
-                {provider === "brave" && "🌐 Brave Search"}
-                {provider === "web" && "🌐 Web"}
+                {provider === "pexels" && "🎨 Pexels"}
+                {provider === "unsplash" && "🎨 Unsplash"}
+                {provider === "pixabay" && "🎨 Pixabay"}
+                {provider === "auto" && "🔄 Auto (Pexels/Unsplash/Pixabay)"}
               </span>
             )}
           </div>
@@ -207,37 +233,30 @@ function SlidePicker({
         </>
       )}
 
-      {/* Panel recherche manuelle — s'affiche quand aucune API n'a trouvé de photos */}
-      {showSearch && photos.length === 0 && (
+      {/* Fallback: si aucune image trouvée après recherche auto, propose un lien de secours */}
+      {searched && photos.length === 0 && (
         <div style={{ marginTop: 10, padding: 12, background: "#0d0d1a", borderRadius: 8, border: "1px solid #2a1a4a" }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: colors.texte, marginBottom: 8 }}>
-            📷 Cherche une photo pour ce slide
+            ⚠️ Pas d'images trouvées automatiquement
           </div>
           <div style={{ fontSize: 11, color: colors.muted, marginBottom: 10, lineHeight: 1.5 }}>
-            Google bloque les recherches automatiques depuis les serveurs.{" "}
-            Voici comment faire en 10 secondes :
+            Essaie une recherche Google directe ou fournis une URL d'image ci-dessous.
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <a href={googleImagesUrl} target="_blank" rel="noopener noreferrer"
-              style={{ ...btnPrimary, fontSize: 11, textAlign: "center", textDecoration: "none", display: "block" }}>
-              🔍 Ouvrir Google Images → "{restaurantNom}"
-            </a>
-            <div style={{ fontSize: 11, color: colors.muted, lineHeight: 1.5 }}>
-              Sur Google Images : clique sur une photo →{" "}
-              <strong style={{ color: colors.texte }}>clic droit</strong> sur l'image agrandie →{" "}
-              <strong style={{ color: colors.texte }}>"Copier l'adresse de l'image"</strong>
-              {" "}→ colle ci-dessous
-            </div>
-          </div>
+          <a href={googleImagesUrl} target="_blank" rel="noopener noreferrer"
+            style={{ ...btnGhost, fontSize: 11, textAlign: "center", textDecoration: "none", display: "block" }}>
+            🔍 Google Images
+          </a>
         </div>
       )}
 
-      {/* Pexels fallback link */}
-      {fallbackUrl && (
+      {/* Fallback search link */}
+      {fallbackUrl && photos.length === 0 && (
         <p style={{ marginTop: 8, fontSize: 12, color: colors.muted }}>
+          Ou cherche directement sur{" "}
           <a href={fallbackUrl} target="_blank" rel="noreferrer" style={{ color: colors.violet }}>
-            Ouvre Pexels →
-          </a>{" "}copie l&apos;URL directe de l&apos;image puis colle-la ci-dessous.
+            Pexels →
+          </a>{" "}
+          copie l&apos;URL de l&apos;image et colle-la ci-dessous.
         </p>
       )}
 
