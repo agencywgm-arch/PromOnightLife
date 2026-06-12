@@ -161,7 +161,7 @@ async function testSerper(): Promise<SourceResult> {
     const res = await fetch("https://google.serper.dev/images", {
       method: "POST",
       headers: { "X-API-KEY": key, "Content-Type": "application/json" },
-      body: JSON.stringify({ q: `"${TEST_RESTAURANT}" restaurant Paris`, gl: "fr", hl: "fr", num: 8 }),
+      body: JSON.stringify({ q: `${TEST_RESTAURANT} restaurant Paris`, gl: "fr", hl: "fr", num: 8 }),
     });
     if (!res.ok) {
       const body = await res.text();

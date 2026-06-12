@@ -115,7 +115,7 @@ function SlidePicker({
           // Source UNIQUE : Google Images via Serper.dev — pas de fallback
           // Pexels/ambiance, on veut exclusivement les vraies photos Google.
           const serperRes = await fetch(
-            `/api/images/serper?q=${encodeURIComponent(`"${restaurantNom}" restaurant ${restaurantAdresse}`)}`
+            `/api/images/serper?q=${encodeURIComponent(`${restaurantNom} restaurant ${restaurantAdresse}`)}`
           );
           const serperData = await serperRes.json();
           const serperPicked = serperRes.ok
