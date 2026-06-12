@@ -37,7 +37,7 @@ async function foursquareNew(key: string, query: string): Promise<{ name: string
   if (!id) return null;
 
   const photoRes = await fetch(
-    `https://places-api.foursquare.com/places/${id}/photos?limit=8`,
+    `https://places-api.foursquare.com/places/${id}/photos?limit=24`,
     { headers }
   );
   if (!photoRes.ok) return null;
@@ -61,7 +61,7 @@ async function foursquareLegacy(key: string, query: string): Promise<{ name: str
   if (!place?.fsq_id) return null;
 
   const photoRes = await fetch(
-    `https://api.foursquare.com/v3/places/${place.fsq_id}/photos?limit=8`,
+    `https://api.foursquare.com/v3/places/${place.fsq_id}/photos?limit=24`,
     { headers }
   );
   if (!photoRes.ok) return null;
@@ -127,7 +127,7 @@ export async function GET(req: NextRequest) {
         );
         const details = await detailsRes.json();
         const refs: string[] = (details.result?.photos || [])
-          .slice(0, 8)
+          .slice(0, 10)
           .map((p: { photo_reference: string }) => p.photo_reference);
         if (refs.length > 0) {
           const photos: PlacePhoto[] = refs.map((ref) => ({

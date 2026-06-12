@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
         "X-API-KEY": key,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ q, gl: "fr", hl: "fr", num: 10 }),
+      body: JSON.stringify({ q, gl: "fr", hl: "fr", num: 40 }),
     });
 
     if (!res.ok) {
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
     const data = await res.json();
     const photos: PhotoResult[] = (data.images || [])
       .filter((img: { imageUrl?: string }) => !!img.imageUrl)
-      .slice(0, 8)
+      .slice(0, 32)
       .map((img: { imageUrl: string; thumbnailUrl?: string; source?: string; link?: string }, i: number) => ({
         id: `serper-${i}`,
         // proxifié pour le rendu canvas (CORS)

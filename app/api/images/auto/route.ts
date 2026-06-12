@@ -24,7 +24,7 @@ async function pexelsSearch(q: string): Promise<PhotoResult[]> {
 
   try {
     const res = await fetch(
-      `https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=5&orientation=portrait`,
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=20&orientation=portrait`,
       { headers: { Authorization: key } }
     );
     if (!res.ok) return [];
@@ -45,7 +45,7 @@ async function pexelsSearch(q: string): Promise<PhotoResult[]> {
 async function unsplashSearch(q: string): Promise<PhotoResult[]> {
   try {
     const res = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=5&orientation=portrait`,
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=20&orientation=portrait`,
       {
         headers: {
           "Accept-Version": "v1",
@@ -73,7 +73,7 @@ async function pixabaySearch(q: string): Promise<PhotoResult[]> {
 
   try {
     const res = await fetch(
-      `https://pixabay.com/api/?key=${key}&q=${encodeURIComponent(q)}&per_page=5&orientation=vertical&image_type=photo`,
+      `https://pixabay.com/api/?key=${key}&q=${encodeURIComponent(q)}&per_page=20&orientation=vertical&image_type=photo`,
       {}
     );
     if (!res.ok) return [];

@@ -1,5 +1,6 @@
 import Nav from "@/components/Nav";
 import CarouselViewer, { type Slide } from "@/components/CarouselViewer";
+import SlideStrip from "@/components/SlideStrip";
 import TikTokAgent from "@/components/TikTokAgent";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -125,39 +126,9 @@ export default async function ContenuPage() {
                     {slides.some((s) => s.imageData) ? (
                       <div>
                         <p style={{ fontSize: 11, color: colors.muted, margin: "0 0 6px" }}>
-                          Slides composées (clique pour télécharger) :
+                          Slides composées — fais défiler, clique pour télécharger :
                         </p>
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(4, 1fr)",
-                            gap: 6,
-                          }}
-                        >
-                          {slides.map((s, i) =>
-                            s.imageData ? (
-                              <a
-                                key={i}
-                                href={s.imageData}
-                                download={`${c.restaurant.replace(/\s+/g, "_")}_slide_${i + 1}.jpg`}
-                                title={`Télécharger slide ${i + 1}`}
-                              >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={s.imageData}
-                                  alt={`Slide ${i + 1}`}
-                                  style={{
-                                    width: "100%",
-                                    aspectRatio: "9 / 16",
-                                    objectFit: "cover",
-                                    borderRadius: 8,
-                                    border: `1px solid ${colors.border}`,
-                                  }}
-                                />
-                              </a>
-                            ) : null
-                          )}
-                        </div>
+                        <SlideStrip slides={slides} restaurant={c.restaurant} />
                       </div>
                     ) : (
                       <CarouselViewer slides={slides} />

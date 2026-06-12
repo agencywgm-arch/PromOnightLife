@@ -42,6 +42,42 @@ type PexelsPhoto = {
 const W = 1080;
 const H = 1920;
 
+/* ─── Registre anti-répétition des photos ─────────────────────────
+   Mémorise (localStorage) les photos déjà proposées pour que chaque
+   slide et chaque génération affiche des choix DIFFÉRENTS. */
+
+const SEEN_KEY = "tiktok_photos_vues";
+let seenPhotos: Set<string> | null = null;
+
+function getSeen(): Set<string> {
+  if (!seenPhotos) {
+    try {
+      seenPhotos = new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || "[]"));
+    } catch {
+      seenPhotos = new Set();
+    }
+  }
+  return seenPhotos;
+}
+
+/** Prend jusqu'à `n` photos jamais montrées, les marque comme vues.
+    Si le stock de nouvelles photos est épuisé, on réutilise tout. */
+function pickFresh<T extends { src: string }>(list: T[], n: number): T[] {
+  const seen = getSeen();
+  let fresh = list.filter((p) => !seen.has(p.src));
+  if (fresh.length < Math.min(3, list.length)) fresh = list; // épuisé → réutilise
+  const picked = fresh.slice(0, n);
+  picked.forEach((p) => seen.add(p.src));
+  try {
+    localStorage.setItem(SEEN_KEY, JSON.stringify(Array.from(seen).slice(-2000)));
+  } catch {
+    /* quota localStorage — tant pis, le Set en mémoire suffit */
+  }
+  return picked;
+}
+
+const PHOTOS_PAR_SLIDE = 8;
+
 /* ─── Composant image picker pour 1 slide ─────────────────────── */
 
 function SlidePicker({
@@ -115,9 +151,12 @@ function SlidePicker({
             `/api/images/place?name=${encodeURIComponent(restaurantNom)}&address=${encodeURIComponent(restaurantAdresse)}`
           );
           const placeData = await placeRes.json();
-          if (placeRes.ok && (placeData.photos || []).length > 0) {
+          const placePicked = placeRes.ok
+            ? pickFresh<{ src: string; thumb: string; source: string }>(placeData.photos || [], PHOTOS_PAR_SLIDE)
+            : [];
+          if (placePicked.length > 0) {
             setPhotos(
-              placeData.photos.map((p: { src: string; thumb: string; source: string }, i: number) => ({
+              placePicked.map((p, i) => ({
                 id: i,
                 pageUrl: "",
                 photographer: p.source,
@@ -135,9 +174,13 @@ function SlidePicker({
             `/api/images/serper?q=${encodeURIComponent(`"${restaurantNom}" restaurant ${restaurantAdresse}`)}`
           );
           const serperData = await serperRes.json();
-          if (serperRes.ok && (serperData.photos || []).length > 0) {
+          const serperPicked = serperRes.ok
+            ? pickFresh<{ src: string; thumb: string; source: string; pageUrl?: string }>(
+                serperData.photos || [], PHOTOS_PAR_SLIDE)
+            : [];
+          if (serperPicked.length > 0) {
             setPhotos(
-              serperData.photos.map((p: { src: string; thumb: string; source: string; pageUrl?: string }, i: number) => ({
+              serperPicked.map((p, i) => ({
                 id: i,
                 pageUrl: p.pageUrl || "",
                 photographer: p.source,
@@ -153,9 +196,11 @@ function SlidePicker({
           // 3. Fallback photos d'ambiance (Pexels/Unsplash/Pixabay)
           const autoRes = await fetch(`/api/images/auto?q=${encodeURIComponent(slide.searchQuery)}`);
           const autoData = await autoRes.json();
-          if (autoData.photos && autoData.photos.length > 0) {
+          const autoPicked = pickFresh<{ src: string; thumb: string; source: string; pageUrl?: string }>(
+            autoData.photos || [], PHOTOS_PAR_SLIDE);
+          if (autoPicked.length > 0) {
             setPhotos(
-              autoData.photos.map((p: any, i: number) => ({
+              autoPicked.map((p, i) => ({
                 id: i,
                 pageUrl: p.pageUrl || "",
                 photographer: p.source,
@@ -238,20 +283,25 @@ function SlidePicker({
               </span>
             )}
           </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+          {/* Bande défilante horizontale — flick rapide, compact */}
+          <div
+            style={{
+              display: "flex",
+              gap: 6,
+              marginTop: 8,
+              overflowX: "auto",
+              paddingBottom: 6,
+              scrollSnapType: "x proximity",
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
             {photos.map((p) => (
-              <div key={p.id} style={{ textAlign: "center" }}>
-                <img src={p.thumb} alt=""
-                  onClick={() => setPreviewPhoto(p)}
-                  style={{ width: 80, height: 120, objectFit: "cover", borderRadius: 6, cursor: "pointer",
-                    border: slide.imageUrl === p.src ? `3px solid ${colors.violet}` : "3px solid transparent",
-                    transition: "transform 0.2s, box-shadow 0.2s",
-                    boxShadow: previewPhoto?.id === p.id ? `0 0 12px ${colors.violet}` : "none" }} />
-                <div style={{ fontSize: 8, color: colors.muted, maxWidth: 84, overflow: "hidden",
-                  textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={p.photographer}>
-                  {p.photographer}
-                </div>
-              </div>
+              <img key={p.id} src={p.thumb} alt="" title={p.photographer}
+                onClick={() => setPreviewPhoto(p)}
+                style={{ width: 64, height: 96, objectFit: "cover", borderRadius: 6, cursor: "pointer",
+                  flexShrink: 0, scrollSnapAlign: "start",
+                  border: slide.imageUrl === p.src ? `3px solid ${colors.violet}` : "3px solid transparent",
+                  boxShadow: previewPhoto?.id === p.id ? `0 0 12px ${colors.violet}` : "none" }} />
             ))}
           </div>
         </>
