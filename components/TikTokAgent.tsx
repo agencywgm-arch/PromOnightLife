@@ -590,18 +590,9 @@ export default function TikTokAgent() {
       await createContenu(fd);
       setSaved((prev) => ({ ...prev, [rIdx]: true }));
       // Rafraîchit la page serveur : le contenu composé apparaît
-      // immédiatement dans la bibliothèque en dessous
+      // immédiatement dans la bibliothèque en dessous, où se font
+      // le téléchargement et le montage (pas de download auto ici)
       router.refresh();
-
-      // Télécharger les slides en ZIP-like (téléchargements séquentiels)
-      rendered.forEach((slide, i) => {
-        if (slide.imageData) {
-          const a = document.createElement("a");
-          a.href = slide.imageData;
-          a.download = `${r.nom.replace(/\s+/g, "_")}_slide_${i + 1}.jpg`;
-          a.click();
-        }
-      });
     } catch (e) {
       alert(`Erreur : ${e instanceof Error ? e.message : String(e)}`);
     } finally {

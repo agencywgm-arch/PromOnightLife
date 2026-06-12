@@ -1,6 +1,6 @@
 "use client";
 
-import { colors } from "@/lib/ui";
+import { colors, btnGhost } from "@/lib/ui";
 import type { Slide } from "@/components/CarouselViewer";
 
 /**
@@ -17,17 +17,33 @@ export default function SlideStrip({
   const rendered = slides.filter((s) => s.imageData);
   if (rendered.length === 0) return null;
 
+  function downloadAll() {
+    rendered.forEach((s, i) => {
+      const a = document.createElement("a");
+      a.href = s.imageData!;
+      a.download = `${restaurant.replace(/\s+/g, "_")}_slide_${i + 1}.jpg`;
+      a.click();
+    });
+  }
+
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: 8,
-        overflowX: "auto",
-        paddingBottom: 6,
-        scrollSnapType: "x mandatory",
-        WebkitOverflowScrolling: "touch",
-      }}
-    >
+    <div>
+      <button
+        onClick={downloadAll}
+        style={{ ...btnGhost, fontSize: 11, padding: "4px 10px", marginBottom: 8 }}
+      >
+        ⬇️ Tout télécharger ({rendered.length} slides)
+      </button>
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          overflowX: "auto",
+          paddingBottom: 6,
+          scrollSnapType: "x mandatory",
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
       {rendered.map((s, i) => (
         <a
           key={i}
@@ -66,6 +82,7 @@ export default function SlideStrip({
           </span>
         </a>
       ))}
+      </div>
     </div>
   );
 }
