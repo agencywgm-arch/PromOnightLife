@@ -130,7 +130,27 @@ function SlidePicker({
             return;
           }
 
-          // 2. Fallback photos d'ambiance (Pexels/Unsplash/Pixabay)
+          // 2. Vraies photos via Google Images (Serper.dev)
+          const serperRes = await fetch(
+            `/api/images/serper?q=${encodeURIComponent(`"${restaurantNom}" restaurant ${restaurantAdresse}`)}`
+          );
+          const serperData = await serperRes.json();
+          if (serperRes.ok && (serperData.photos || []).length > 0) {
+            setPhotos(
+              serperData.photos.map((p: { src: string; thumb: string; source: string; pageUrl?: string }, i: number) => ({
+                id: i,
+                pageUrl: p.pageUrl || "",
+                photographer: p.source,
+                src: p.src,
+                thumb: p.thumb,
+              }))
+            );
+            setProvider("serper");
+            setSearched(true);
+            return;
+          }
+
+          // 3. Fallback photos d'ambiance (Pexels/Unsplash/Pixabay)
           const autoRes = await fetch(`/api/images/auto?q=${encodeURIComponent(slide.searchQuery)}`);
           const autoData = await autoRes.json();
           if (autoData.photos && autoData.photos.length > 0) {
@@ -201,16 +221,16 @@ function SlidePicker({
             {provider && (
               <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 999,
                 background:
-                  provider === "foursquare" || provider === "google" || provider === "place" ? "#1a2a12" : "#0d2233",
+                  ["foursquare", "google", "place", "serper"].includes(provider) ? "#1a2a12" : "#0d2233",
                 color:
-                  provider === "foursquare" || provider === "google" || provider === "place" ? "#8ade4a" : "#4ab3ff",
+                  ["foursquare", "google", "place", "serper"].includes(provider) ? "#8ade4a" : "#4ab3ff",
                 border: `1px solid ${
-                  provider === "foursquare" || provider === "google" || provider === "place" ? "#8ade4a44" : "#4ab3ff44"
+                  ["foursquare", "google", "place", "serper"].includes(provider) ? "#8ade4a44" : "#4ab3ff44"
                 }` }}>
                 {provider === "foursquare" && "📷 Foursquare"}
                 {provider === "google" && "📷 Google Maps"}
                 {provider === "place" && "📷 Photos du lieu"}
-                {provider === "tripadvisor" && "🌟 TripAdvisor"}
+                {provider === "serper" && "📷 Google Images"}
                 {provider === "pexels" && "🎨 Pexels"}
                 {provider === "unsplash" && "🎨 Unsplash"}
                 {provider === "pixabay" && "🎨 Pixabay"}

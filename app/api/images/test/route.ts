@@ -31,7 +31,7 @@ async function testFoursquare(): Promise<SourceResult> {
   }
   try {
     const isLegacy = key.startsWith("fsq3");
-    const headers = isLegacy
+    const headers: Record<string, string> = isLegacy
       ? { Authorization: key, Accept: "application/json" }
       : {
           Authorization: `Bearer ${key}`,
@@ -146,6 +146,53 @@ async function testGooglePlaces(): Promise<SourceResult> {
   }
 }
 
+async function testSerper(): Promise<SourceResult> {
+  const key = process.env.SERPER_API_KEY;
+  if (!key) {
+    return {
+      source: "Serper (Google Images)",
+      configured: false,
+      works: false,
+      photosFound: 0,
+      detail: "SERPER_API_KEY absente — inscris-toi sur serper.dev (gratuit, sans carte) puis ajoute la clé dans Vercel",
+    };
+  }
+  try {
+    const res = await fetch("https://google.serper.dev/images", {
+      method: "POST",
+      headers: { "X-API-KEY": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ q: `"${TEST_RESTAURANT}" restaurant Paris`, gl: "fr", hl: "fr", num: 8 }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      return {
+        source: "Serper (Google Images)",
+        configured: true,
+        works: false,
+        photosFound: 0,
+        detail: `Erreur HTTP ${res.status} — clé invalide ou quota épuisé. Réponse : ${body.slice(0, 200)}`,
+      };
+    }
+    const data = await res.json();
+    const count = (data.images || []).length;
+    return {
+      source: "Serper (Google Images)",
+      configured: true,
+      works: true,
+      photosFound: count,
+      detail: `✅ Clé valide — ${count} photos Google Images pour « ${TEST_RESTAURANT} »`,
+    };
+  } catch (e) {
+    return {
+      source: "Serper (Google Images)",
+      configured: true,
+      works: false,
+      photosFound: 0,
+      detail: `Erreur réseau : ${e instanceof Error ? e.message : String(e)}`,
+    };
+  }
+}
+
 async function testPexels(): Promise<SourceResult> {
   const key = process.env.PEXELS_API_KEY;
   if (!key) {
@@ -191,25 +238,28 @@ async function testPexels(): Promise<SourceResult> {
 }
 
 export async function GET() {
-  const [foursquare, google, pexels] = await Promise.all([
+  const [foursquare, google, serper, pexels] = await Promise.all([
     testFoursquare(),
     testGooglePlaces(),
+    testSerper(),
     testPexels(),
   ]);
 
-  const sources = [foursquare, google, pexels];
+  const sources = [foursquare, google, serper, pexels];
   const realPhotoSourceOk = foursquare.works && foursquare.photosFound > 0
     ? "Foursquare"
     : google.works && google.photosFound > 0
       ? "Google Places"
-      : null;
+      : serper.works && serper.photosFound > 0
+        ? "Serper (Google Images)"
+        : null;
 
   return NextResponse.json(
     {
       restaurantTest: TEST_RESTAURANT,
       verdict: realPhotoSourceOk
         ? `✅ TOUT EST BON — les vraies photos viendront de ${realPhotoSourceOk}`
-        : "❌ AUCUNE source de vraies photos ne fonctionne — configure GOOGLE_PLACES_API_KEY (recommandé) ou FOURSQUARE_API_KEY puis redéploie",
+        : "❌ AUCUNE source de vraies photos ne fonctionne — configure SERPER_API_KEY (recommandé, gratuit sans carte : serper.dev) puis redéploie",
       sources,
     },
     { headers: { "Cache-Control": "no-store" } }
