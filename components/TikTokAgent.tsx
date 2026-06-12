@@ -96,48 +96,14 @@ function SlidePicker({
   onSelect: (rIdx: number, sIdx: number, url: string, src: string) => void;
 }) {
   const [photos, setPhotos] = useState<PexelsPhoto[]>([]);
-  const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [provider, setProvider] = useState<string | null>(null);
   const [error, setError] = useState<ReactNode | null>(null);
   const [customUrl, setCustomUrl] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<PexelsPhoto | null>(null);
 
   const googleImagesUrl = `https://www.google.com/search?q=${encodeURIComponent(`"${restaurantNom}" restaurant Paris`)}&tbm=isch&hl=fr`;
-
-  async function searchPlace() {
-    setLoading(true);
-    setError(null);
-    try {
-      // APIs lieux (Foursquare/Google Places si clés configurées)
-      const res = await fetch(
-        `/api/images/place?name=${encodeURIComponent(restaurantNom)}&address=${encodeURIComponent(restaurantAdresse)}`
-      );
-      const data = await res.json();
-      if (res.ok && (data.photos || []).length > 0) {
-        setPhotos(
-          data.photos.map((p: { src: string; thumb: string; source: string }, i: number) => ({
-            id: i,
-            pageUrl: "",
-            photographer: p.source,
-            src: p.src,
-            thumb: p.thumb,
-          }))
-        );
-        setProvider(data.provider || "place");
-        setSearched(true);
-        return;
-      }
-
-      // Aucune API disponible → afficher le panel de recherche manuelle
-      setShowSearch(true);
-      setSearched(true);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   // Auto-search: déclenche les recherches à montage du composant
   useEffect(() => {
@@ -146,30 +112,8 @@ function SlidePicker({
         setLoading(true);
         setError(null);
         try {
-          // 1. Essaie d'abord les vraies photos du restaurant (Foursquare/Google Places)
-          const placeRes = await fetch(
-            `/api/images/place?name=${encodeURIComponent(restaurantNom)}&address=${encodeURIComponent(restaurantAdresse)}`
-          );
-          const placeData = await placeRes.json();
-          const placePicked = placeRes.ok
-            ? pickFresh<{ src: string; thumb: string; source: string }>(placeData.photos || [], PHOTOS_PAR_SLIDE)
-            : [];
-          if (placePicked.length > 0) {
-            setPhotos(
-              placePicked.map((p, i) => ({
-                id: i,
-                pageUrl: "",
-                photographer: p.source,
-                src: p.src,
-                thumb: p.thumb,
-              }))
-            );
-            setProvider(placeData.provider || "place");
-            setSearched(true);
-            return;
-          }
-
-          // 2. Vraies photos via Google Images (Serper.dev)
+          // Source UNIQUE : Google Images via Serper.dev — pas de fallback
+          // Pexels/ambiance, on veut exclusivement les vraies photos Google.
           const serperRes = await fetch(
             `/api/images/serper?q=${encodeURIComponent(`"${restaurantNom}" restaurant ${restaurantAdresse}`)}`
           );
@@ -193,24 +137,13 @@ function SlidePicker({
             return;
           }
 
-          // 3. Fallback photos d'ambiance (Pexels/Unsplash/Pixabay)
-          const autoRes = await fetch(`/api/images/auto?q=${encodeURIComponent(slide.searchQuery)}`);
-          const autoData = await autoRes.json();
-          const autoPicked = pickFresh<{ src: string; thumb: string; source: string; pageUrl?: string }>(
-            autoData.photos || [], PHOTOS_PAR_SLIDE);
-          if (autoPicked.length > 0) {
-            setPhotos(
-              autoPicked.map((p, i) => ({
-                id: i,
-                pageUrl: p.pageUrl || "",
-                photographer: p.source,
-                src: p.src,
-                thumb: p.thumb,
-              }))
-            );
-            setProvider(autoData.provider || "auto");
+          // Aucun résultat Google → on explique pourquoi, sans photos de remplacement
+          if (serperData.noProvider) {
+            setError("Clé Serper absente : ajoute SERPER_API_KEY dans Vercel → Settings → Environment Variables, puis Redeploy. Vérifie sur /api/images/test.");
+          } else if (serperData.error) {
+            setError(`Recherche Google indisponible : ${serperData.error}`);
           } else {
-            setFallbackUrl(`https://www.pexels.com/search/${encodeURIComponent(slide.searchQuery)}/`);
+            setError("Aucun résultat Google Images pour ce restaurant.");
           }
         } finally {
           setSearched(true);
@@ -321,17 +254,6 @@ function SlidePicker({
             🔍 Google Images
           </a>
         </div>
-      )}
-
-      {/* Fallback search link */}
-      {fallbackUrl && photos.length === 0 && (
-        <p style={{ marginTop: 8, fontSize: 12, color: colors.muted }}>
-          Ou cherche directement sur{" "}
-          <a href={fallbackUrl} target="_blank" rel="noreferrer" style={{ color: colors.violet }}>
-            Pexels →
-          </a>{" "}
-          copie l&apos;URL de l&apos;image et colle-la ci-dessous.
-        </p>
       )}
 
       {/* URL manuelle — toujours disponible */}
