@@ -165,6 +165,7 @@ export default function PhotoSearcher() {
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState("");
   const [composing, setComposing] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const router = useRouter();
 
@@ -197,6 +198,37 @@ export default function PhotoSearcher() {
       setError(`Erreur réseau : ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function generateDescriptions() {
+    if (slides.length === 0) {
+      setError("Ajoute d'abord des photos au carrousel");
+      return;
+    }
+    setGenerating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/agent/describe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: query.trim() || "restaurant gastronomique", nbSlides: slides.length }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Erreur IA");
+      setSlides((prev) =>
+        prev.map((s, i) => ({
+          ...s,
+          titre: data.slides[i]?.titre || s.titre,
+          sousTitre: data.slides[i]?.sousTitre || s.sousTitre,
+        }))
+      );
+      if (data.caption) setCaption(data.caption);
+      if (data.hashtags) setHashtags(data.hashtags);
+    } catch (e) {
+      setError(`Erreur IA : ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -362,9 +394,24 @@ export default function PhotoSearcher() {
       {/* Carrousel en cours de composition */}
       {slides.length > 0 && (
         <div style={{ marginTop: 16, padding: 12, background: "#0f0f1a", borderRadius: 8, border: `1px solid ${colors.border}` }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: colors.texte, margin: "0 0 12px" }}>
-            🎬 Carrousel ({slides.length}/4 slides)
-          </p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: colors.texte, margin: 0 }}>
+              🎬 Carrousel ({slides.length}/4 slides)
+            </p>
+            <button
+              onClick={generateDescriptions}
+              disabled={generating}
+              style={{
+                ...btnPrimary,
+                fontSize: 11,
+                padding: "6px 12px",
+                background: generating ? "#2a1a4a" : "linear-gradient(135deg, #7c3aed, #4f46e5)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {generating ? "✨ Génère..." : "✨ Générer les descriptions à l'IA"}
+            </button>
+          </div>
 
           {slides.map((slide, idx) => (
             <div
