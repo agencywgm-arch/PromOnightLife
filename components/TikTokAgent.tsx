@@ -385,10 +385,38 @@ async function composeSlide(slide: AgentSlide, canvas: HTMLCanvasElement): Promi
         img.onerror = () => rej();
         img.src = slide.imageUrl!;
       });
-      const scale = Math.max(W / img.width, H / img.height);
-      const w = img.width * scale;
-      const h = img.height * scale;
-      ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+
+      const scale = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+      const targetW = Math.round(img.naturalWidth * scale);
+      const targetH = Math.round(img.naturalHeight * scale);
+
+      // Upscaling progressif par étapes de 2x — bien meilleure qualité que 1 seul saut
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+
+      let source: HTMLImageElement | HTMLCanvasElement = img;
+      if (scale > 1.5) {
+        let curW = img.naturalWidth;
+        let curH = img.naturalHeight;
+        let cur: HTMLImageElement | HTMLCanvasElement = img;
+        while (curW * 2 < targetW || curH * 2 < targetH) {
+          const nextW = Math.min(curW * 2, targetW);
+          const nextH = Math.min(curH * 2, targetH);
+          const off = document.createElement("canvas");
+          off.width = nextW;
+          off.height = nextH;
+          const offCtx = off.getContext("2d")!;
+          offCtx.imageSmoothingEnabled = true;
+          offCtx.imageSmoothingQuality = "high";
+          offCtx.drawImage(cur, 0, 0, nextW, nextH);
+          cur = off;
+          curW = nextW;
+          curH = nextH;
+        }
+        source = cur;
+      }
+
+      ctx.drawImage(source, (W - targetW) / 2, (H - targetH) / 2, targetW, targetH);
     } catch {
       // Image non chargeable — fond gradient
       const g = ctx.createLinearGradient(0, 0, W, H);
