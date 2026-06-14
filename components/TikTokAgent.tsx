@@ -597,9 +597,6 @@ export default function TikTokAgent() {
       fd.set("scoreLuxe", "75");
       await createContenu(fd);
       setSaved((prev) => ({ ...prev, [rIdx]: true }));
-      // Rafraîchit la page serveur : le contenu composé apparaît
-      // immédiatement dans la bibliothèque en dessous, où se font
-      // le téléchargement et le montage (pas de download auto ici)
       router.refresh();
     } catch (e) {
       alert(`Erreur : ${e instanceof Error ? e.message : String(e)}`);
