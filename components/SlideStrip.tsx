@@ -17,13 +17,16 @@ export default function SlideStrip({
   const rendered = slides.filter((s) => s.imageData);
   if (rendered.length === 0) return null;
 
-  function downloadAll() {
-    rendered.forEach((s, i) => {
+  async function downloadAll() {
+    for (let i = 0; i < rendered.length; i++) {
+      const s = rendered[i];
       const a = document.createElement("a");
       a.href = s.imageData!;
       a.download = `${restaurant.replace(/\s+/g, "_")}_slide_${i + 1}.jpg`;
       a.click();
-    });
+      // Délai entre les téléchargements pour éviter que le navigateur ne les ignore
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
   }
 
   return (
