@@ -102,8 +102,39 @@ function SlidePicker({
   const [error, setError] = useState<ReactNode | null>(null);
   const [customUrl, setCustomUrl] = useState("");
   const [previewPhoto, setPreviewPhoto] = useState<PexelsPhoto | null>(null);
+  const [customSearch, setCustomSearch] = useState("");
+  const [customSearchLoading, setCustomSearchLoading] = useState(false);
 
   const googleImagesUrl = `https://www.google.com/search?q=${encodeURIComponent(`"${restaurantNom}" restaurant Paris`)}&tbm=isch&hl=fr`;
+
+  // Recherche personnalisée utilisateur
+  async function handleCustomSearch() {
+    if (!customSearch.trim()) return;
+    setCustomSearchLoading(true);
+    try {
+      const res = await fetch(`/api/images/serper?q=${encodeURIComponent(customSearch)}`);
+      const data = await res.json();
+      const picked = pickFresh<{ src: string; thumb: string; source: string; pageUrl?: string }>(
+        data.photos || [], PHOTOS_PAR_SLIDE);
+      if (picked.length > 0) {
+        setPhotos(picked.map((p, i) => ({
+          id: i,
+          pageUrl: p.pageUrl || "",
+          photographer: p.source,
+          src: p.src,
+          thumb: p.thumb,
+        })));
+        setProvider("serper");
+        setError(null);
+      } else {
+        setError("Aucun résultat pour cette recherche.");
+      }
+    } catch (e) {
+      setError(`Erreur recherche : ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setCustomSearchLoading(false);
+    }
+  }
 
   // Auto-search: déclenche les recherches à montage du composant
   useEffect(() => {
@@ -161,18 +192,18 @@ function SlidePicker({
       style={{
         border: `1px solid ${isSelected ? colors.violet : colors.border}`,
         borderRadius: 10,
-        padding: 12,
+        padding: "10px 10px",
         background: isSelected ? "#12091a" : colors.bg,
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: colors.violet }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 6 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: "10px", fontWeight: 700, color: colors.violet }}>
             Slide {slideIndex + 1}
           </div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: colors.texte }}>{slide.titre}</div>
+          <div style={{ fontSize: "12px", fontWeight: 600, color: colors.texte, wordBreak: "break-word" }}>{slide.titre}</div>
           {slide.sousTitre && (
-            <div style={{ fontSize: 11, color: colors.muted }}>{slide.sousTitre}</div>
+            <div style={{ fontSize: "10px", color: colors.muted, wordBreak: "break-word" }}>{slide.sousTitre}</div>
           )}
         </div>
         {isSelected && (
@@ -216,14 +247,14 @@ function SlidePicker({
               </span>
             )}
           </div>
-          {/* Bande défilante horizontale — flick rapide, compact */}
+          {/* Bande défilante horizontale — flick rapide, compact, responsive */}
           <div
             style={{
               display: "flex",
-              gap: 6,
-              marginTop: 8,
+              gap: 5,
+              marginTop: 6,
               overflowX: "auto",
-              paddingBottom: 6,
+              paddingBottom: 4,
               scrollSnapType: "x proximity",
               WebkitOverflowScrolling: "touch",
             }}
@@ -231,38 +262,85 @@ function SlidePicker({
             {photos.map((p) => (
               <img key={p.id} src={p.thumb} alt="" title={p.photographer}
                 onClick={() => setPreviewPhoto(p)}
-                style={{ width: 64, height: 96, objectFit: "cover", borderRadius: 6, cursor: "pointer",
-                  flexShrink: 0, scrollSnapAlign: "start",
-                  border: slide.imageUrl === p.src ? `3px solid ${colors.violet}` : "3px solid transparent",
-                  boxShadow: previewPhoto?.id === p.id ? `0 0 12px ${colors.violet}` : "none" }} />
+                style={{
+                  width: "50px",
+                  height: "75px",
+                  objectFit: "cover",
+                  borderRadius: 5,
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  scrollSnapAlign: "start",
+                  border: slide.imageUrl === p.src ? `2px solid ${colors.violet}` : "2px solid transparent",
+                  boxShadow: previewPhoto?.id === p.id ? `0 0 8px ${colors.violet}` : "none",
+                }} />
             ))}
           </div>
         </>
       )}
 
+      {/* Barre de recherche personnalisée */}
+      {searched && (
+        <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+          <input
+            type="text"
+            placeholder="🔍 Cherche d'autres photos (ex: 'sushi tokyo')"
+            value={customSearch}
+            onChange={(e) => setCustomSearch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleCustomSearch()}
+            style={{
+              flex: 1,
+              minWidth: "100px",
+              padding: "6px 10px",
+              fontSize: "12px",
+              borderRadius: 6,
+              border: `1px solid ${colors.border}`,
+              background: colors.bg,
+              color: colors.texte,
+            }}
+          />
+          <button
+            onClick={handleCustomSearch}
+            disabled={!customSearch.trim() || customSearchLoading}
+            style={{
+              padding: "6px 10px",
+              fontSize: "11px",
+              borderRadius: 6,
+              background: customSearchLoading ? colors.border : colors.violet,
+              color: "#000",
+              border: "none",
+              cursor: customSearchLoading ? "wait" : "pointer",
+              whiteSpace: "nowrap",
+              fontWeight: 600,
+            }}
+          >
+            {customSearchLoading ? "🔄" : "Chercher"}
+          </button>
+        </div>
+      )}
+
       {/* Fallback: si aucune image trouvée après recherche auto, propose un lien de secours */}
       {searched && photos.length === 0 && (
-        <div style={{ marginTop: 10, padding: 12, background: "#0d0d1a", borderRadius: 8, border: "1px solid #2a1a4a" }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: colors.texte, marginBottom: 8 }}>
-            ⚠️ Pas d'images trouvées automatiquement
+        <div style={{ marginTop: 8, padding: 10, background: "#0d0d1a", borderRadius: 6, border: "1px solid #2a1a4a" }}>
+          <div style={{ fontSize: "11px", fontWeight: 700, color: colors.texte, marginBottom: 6 }}>
+            ⚠️ Pas d'images
           </div>
-          <div style={{ fontSize: 11, color: colors.muted, marginBottom: 10, lineHeight: 1.5 }}>
-            Essaie une recherche Google directe ou fournis une URL d'image ci-dessous.
+          <div style={{ fontSize: "10px", color: colors.muted, marginBottom: 8, lineHeight: 1.4 }}>
+            Essaie une recherche personnalisée ci-dessus ou Google Images.
           </div>
           <a href={googleImagesUrl} target="_blank" rel="noopener noreferrer"
-            style={{ ...btnGhost, fontSize: 11, textAlign: "center", textDecoration: "none", display: "block" }}>
+            style={{ ...btnGhost, fontSize: "10px", textAlign: "center", textDecoration: "none", display: "block", padding: "4px 8px" }}>
             🔍 Google Images
           </a>
         </div>
       )}
 
       {/* URL manuelle — toujours disponible */}
-      <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+      <div style={{ display: "flex", gap: 4, marginTop: 8, flexWrap: "wrap" }}>
         <input
           value={customUrl}
           onChange={(e) => setCustomUrl(e.target.value)}
-          placeholder="Colle ici l'URL de l'image (clic droit → copier l'adresse de l'image)"
-          style={{ ...input, fontSize: 11 }}
+          placeholder="URL de l'image"
+          style={{ ...input, fontSize: "10px", padding: "6px 8px", flex: 1, minWidth: "80px" }}
         />
         <button
           onClick={() => {
@@ -274,7 +352,7 @@ function SlidePicker({
             }
           }}
           disabled={!customUrl.trim()}
-          style={{ ...btnGhost, fontSize: 11, whiteSpace: "nowrap" }}
+          style={{ ...btnGhost, fontSize: "10px", padding: "6px 8px", whiteSpace: "nowrap" }}
         >
           Utiliser
         </button>
