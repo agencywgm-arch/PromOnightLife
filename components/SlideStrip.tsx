@@ -23,9 +23,13 @@ export default function SlideStrip({
       const a = document.createElement("a");
       a.href = s.imageData!;
       a.download = `${restaurant.replace(/\s+/g, "_")}_slide_${i + 1}.jpg`;
+      // Ajouter au DOM avant de cliquer
+      document.body.appendChild(a);
       a.click();
-      // Délai entre les téléchargements pour éviter que le navigateur ne les ignore
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      // Retirer du DOM
+      document.body.removeChild(a);
+      // Délai avant le prochain téléchargement
+      await new Promise((resolve) => setTimeout(resolve, 300));
     }
   }
 
