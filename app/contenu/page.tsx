@@ -1,6 +1,7 @@
 import Nav from "@/components/Nav";
 import CarouselViewer, { type Slide } from "@/components/CarouselViewer";
 import SlideStrip from "@/components/SlideStrip";
+import PhotoSearcher from "@/components/PhotoSearcher";
 import TikTokAgent from "@/components/TikTokAgent";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -25,6 +26,9 @@ export default async function ContenuPage() {
         <p style={{ color: colors.muted, marginTop: 0, marginBottom: 24 }}>
           Carrousels 9:16 · Restaurants parisiens haut de gamme · Pipeline EN_ATTENTE → VALIDE → EXPORTE
         </p>
+
+        {/* Outil de recherche de photos — indépendant du générateur */}
+        <PhotoSearcher />
 
         {!hasAnthropicKey ? (
           <div

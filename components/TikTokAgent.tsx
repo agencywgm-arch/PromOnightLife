@@ -102,39 +102,8 @@ function SlidePicker({
   const [error, setError] = useState<ReactNode | null>(null);
   const [customUrl, setCustomUrl] = useState("");
   const [previewPhoto, setPreviewPhoto] = useState<PexelsPhoto | null>(null);
-  const [customSearch, setCustomSearch] = useState("");
-  const [customSearchLoading, setCustomSearchLoading] = useState(false);
 
   const googleImagesUrl = `https://www.google.com/search?q=${encodeURIComponent(`"${restaurantNom}" restaurant Paris`)}&tbm=isch&hl=fr`;
-
-  // Recherche personnalisée utilisateur
-  async function handleCustomSearch() {
-    if (!customSearch.trim()) return;
-    setCustomSearchLoading(true);
-    try {
-      const res = await fetch(`/api/images/serper?q=${encodeURIComponent(customSearch)}`);
-      const data = await res.json();
-      const picked = pickFresh<{ src: string; thumb: string; source: string; pageUrl?: string }>(
-        data.photos || [], PHOTOS_PAR_SLIDE);
-      if (picked.length > 0) {
-        setPhotos(picked.map((p, i) => ({
-          id: i,
-          pageUrl: p.pageUrl || "",
-          photographer: p.source,
-          src: p.src,
-          thumb: p.thumb,
-        })));
-        setProvider("serper");
-        setError(null);
-      } else {
-        setError("Aucun résultat pour cette recherche.");
-      }
-    } catch (e) {
-      setError(`Erreur recherche : ${e instanceof Error ? e.message : String(e)}`);
-    } finally {
-      setCustomSearchLoading(false);
-    }
-  }
 
   // Auto-search: déclenche les recherches à montage du composant
   useEffect(() => {
@@ -278,45 +247,6 @@ function SlidePicker({
         </>
       )}
 
-      {/* Barre de recherche personnalisée */}
-      {searched && (
-        <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
-          <input
-            type="text"
-            placeholder="🔍 Cherche d'autres photos (ex: 'sushi tokyo')"
-            value={customSearch}
-            onChange={(e) => setCustomSearch(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleCustomSearch()}
-            style={{
-              flex: 1,
-              minWidth: "100px",
-              padding: "6px 10px",
-              fontSize: "12px",
-              borderRadius: 6,
-              border: `1px solid ${colors.border}`,
-              background: colors.bg,
-              color: colors.texte,
-            }}
-          />
-          <button
-            onClick={handleCustomSearch}
-            disabled={!customSearch.trim() || customSearchLoading}
-            style={{
-              padding: "6px 10px",
-              fontSize: "11px",
-              borderRadius: 6,
-              background: customSearchLoading ? colors.border : colors.violet,
-              color: "#000",
-              border: "none",
-              cursor: customSearchLoading ? "wait" : "pointer",
-              whiteSpace: "nowrap",
-              fontWeight: 600,
-            }}
-          >
-            {customSearchLoading ? "🔄" : "Chercher"}
-          </button>
-        </div>
-      )}
 
       {/* Fallback: si aucune image trouvée après recherche auto, propose un lien de secours */}
       {searched && photos.length === 0 && (
