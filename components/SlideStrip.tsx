@@ -20,16 +20,22 @@ export default function SlideStrip({
   async function downloadAll() {
     for (let i = 0; i < rendered.length; i++) {
       const s = rendered[i];
+      // Convertir data URL → Blob → Object URL (plus fiable que data URL directe)
+      const res = await fetch(s.imageData!);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
       const a = document.createElement("a");
-      a.href = s.imageData!;
+      a.href = blobUrl;
       a.download = `${restaurant.replace(/\s+/g, "_")}_slide_${i + 1}.jpg`;
-      // Ajouter au DOM avant de cliquer
       document.body.appendChild(a);
       a.click();
-      // Retirer du DOM
       document.body.removeChild(a);
-      // Délai avant le prochain téléchargement
-      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Libère la mémoire après le téléchargement
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+      // Délai entre chaque téléchargement
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
   }
 
