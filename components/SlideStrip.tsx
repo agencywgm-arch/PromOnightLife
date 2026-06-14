@@ -3,10 +3,6 @@
 import { colors, btnGhost } from "@/lib/ui";
 import type { Slide } from "@/components/CarouselViewer";
 
-/**
- * Bande de slides défilante horizontalement (flick rapide, scroll-snap).
- * Remplace la grille 4 colonnes de la bibliothèque. Clic = téléchargement.
- */
 export default function SlideStrip({
   slides,
   restaurant,
@@ -17,35 +13,56 @@ export default function SlideStrip({
   const rendered = slides.filter((s) => s.imageData);
   if (rendered.length === 0) return null;
 
-  async function downloadAll() {
-    for (let i = 0; i < rendered.length; i++) {
-      const s = rendered[i];
-      // Convertir data URL → Blob → Object URL (plus fiable que data URL directe)
-      const res = await fetch(s.imageData!);
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
+  async function shareAll() {
+    try {
+      // Convertir chaque data URL en File
+      const files: File[] = await Promise.all(
+        rendered.map(async (s, i) => {
+          const res = await fetch(s.imageData!);
+          const blob = await res.blob();
+          return new File(
+            [blob],
+            `${restaurant.replace(/\s+/g, "_")}_slide_${i + 1}.jpg`,
+            { type: "image/jpeg" }
+          );
+        })
+      );
 
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = `${restaurant.replace(/\s+/g, "_")}_slide_${i + 1}.jpg`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
-      // Libère la mémoire après le téléchargement
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-      // Délai entre chaque téléchargement
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Web Share API — ouvre le menu natif iOS/Android
+      if (navigator.canShare && navigator.canShare({ files })) {
+        await navigator.share({
+          files,
+          title: restaurant,
+        });
+      } else {
+        // Fallback navigateur desktop : téléchargement séquentiel
+        for (let i = 0; i < files.length; i++) {
+          const url = URL.createObjectURL(files[i]);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = files[i].name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 2000);
+          await new Promise((r) => setTimeout(r, 400));
+        }
+      }
+    } catch (e) {
+      // L'utilisateur a annulé le partage — pas d'erreur à afficher
+      if (e instanceof Error && e.name !== "AbortError") {
+        console.error("Erreur partage :", e);
+      }
     }
   }
 
   return (
     <div>
       <button
-        onClick={downloadAll}
+        onClick={shareAll}
         style={{ ...btnGhost, fontSize: 11, padding: "4px 10px", marginBottom: 8 }}
       >
-        ⬇️ Tout télécharger ({rendered.length} slides)
+        📤 Sauvegarder les {rendered.length} slides
       </button>
       <div
         style={{
@@ -57,45 +74,46 @@ export default function SlideStrip({
           WebkitOverflowScrolling: "touch",
         }}
       >
-      {rendered.map((s, i) => (
-        <a
-          key={i}
-          href={s.imageData!}
-          download={`${restaurant.replace(/\s+/g, "_")}_slide_${i + 1}.jpg`}
-          title={`Télécharger slide ${i + 1}`}
-          style={{ flexShrink: 0, scrollSnapAlign: "start", position: "relative" }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={s.imageData!}
-            alt={`Slide ${i + 1}`}
-            style={{
-              height: 220,
-              aspectRatio: "9 / 16",
-              objectFit: "cover",
-              borderRadius: 8,
-              border: `1px solid ${colors.border}`,
-              display: "block",
-            }}
-          />
-          <span
-            style={{
-              position: "absolute",
-              bottom: 6,
-              right: 6,
-              fontSize: 10,
-              fontWeight: 700,
-              color: "#fff",
-              background: "rgba(0,0,0,0.65)",
-              borderRadius: 6,
-              padding: "2px 7px",
-            }}
+        {rendered.map((s, i) => (
+          <a
+            key={i}
+            href={s.imageData!}
+            download={`${restaurant.replace(/\s+/g, "_")}_slide_${i + 1}.jpg`}
+            title={`Télécharger slide ${i + 1}`}
+            style={{ flexShrink: 0, scrollSnapAlign: "start", position: "relative" }}
           >
-            {i + 1}/{rendered.length}
-          </span>
-        </a>
-      ))}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={s.imageData!}
+              alt={`Slide ${i + 1}`}
+              style={{
+                height: 220,
+                aspectRatio: "9 / 16",
+                objectFit: "cover",
+                borderRadius: 8,
+                border: `1px solid ${colors.border}`,
+                display: "block",
+              }}
+            />
+            <span
+              style={{
+                position: "absolute",
+                bottom: 6,
+                right: 6,
+                fontSize: 10,
+                fontWeight: 700,
+                color: "#fff",
+                background: "rgba(0,0,0,0.65)",
+                borderRadius: 6,
+                padding: "2px 7px",
+              }}
+            >
+              {i + 1}/{rendered.length}
+            </span>
+          </a>
+        ))}
       </div>
     </div>
   );
 }
+
