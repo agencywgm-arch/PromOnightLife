@@ -11,6 +11,7 @@ type Photo = {
   thumb: string;
   source: string;
   pageUrl?: string;
+  isUGC?: boolean;
 };
 
 type Slide = {
@@ -219,6 +220,7 @@ export default function PhotoSearcher() {
         thumb: p.thumb,
         source: p.source,
         pageUrl: p.pageUrl,
+        isUGC: p.isUGC || false,
       }));
       if (results.length === 0) setError("Aucun résultat trouvé.");
       else setPhotos(results);
@@ -391,6 +393,21 @@ export default function PhotoSearcher() {
                       opacity: added ? 1 : 0.8,
                     }}
                   />
+                  {p.isUGC && !added && (
+                    <span style={{
+                      position: "absolute",
+                      top: 4,
+                      left: 4,
+                      background: "linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)",
+                      borderRadius: 4,
+                      fontSize: 9,
+                      fontWeight: 700,
+                      color: "#fff",
+                      padding: "2px 5px",
+                    }}>
+                      IG
+                    </span>
+                  )}
                   {added && (
                     <span
                       style={{
