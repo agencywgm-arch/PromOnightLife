@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { colors } from "@/lib/ui";
 
 const links = [
@@ -14,6 +15,29 @@ const links = [
 
 export default function Nav() {
   const pathname = usePathname();
+  const [visible, setVisible] = useState(true);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    function onScroll() {
+      const current = window.scrollY;
+      // Toujours visible si on est tout en haut
+      if (current < 10) {
+        setVisible(true);
+      } else if (current > lastScrollY.current + 4) {
+        // Scroll vers le bas → cache
+        setVisible(false);
+      } else if (current < lastScrollY.current - 4) {
+        // Scroll vers le haut → montre
+        setVisible(true);
+      }
+      lastScrollY.current = current;
+    }
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <nav
       style={{
@@ -23,6 +47,8 @@ export default function Nav() {
         background: "rgba(10,10,15,0.9)",
         backdropFilter: "blur(12px)",
         borderBottom: `1px solid ${colors.border}`,
+        transform: visible ? "translateY(0)" : "translateY(-110%)",
+        transition: "transform 0.25s ease",
       }}
     >
       <div

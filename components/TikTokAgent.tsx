@@ -551,12 +551,12 @@ export default function TikTokAgent() {
   const [historique, setHistorique] = useState<string[]>([]);
   const [composing, setComposing] = useState<number | null>(null);
   const [saved, setSaved] = useState<Record<number, boolean>>({});
+  const [ouvert, setOuvert] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const router = useRouter();
 
-  const hasApiKey = true; // vérifié côté serveur — l'erreur revient dans la réponse
-
   async function suggest() {
+    setOuvert(true);
     setLoading(true);
     setError(null);
     setRestaurants([]);
@@ -626,6 +626,14 @@ export default function TikTokAgent() {
       await createContenu(fd);
       setSaved((prev) => ({ ...prev, [rIdx]: true }));
       router.refresh();
+      // Ferme le panneau si tous les restaurants sont sauvegardés
+      setSaved((prev) => {
+        const next = { ...prev, [rIdx]: true };
+        if (restaurants.length > 0 && Object.keys(next).length >= restaurants.length) {
+          setOuvert(false);
+        }
+        return next;
+      });
     } catch (e) {
       alert(`Erreur : ${e instanceof Error ? e.message : String(e)}`);
     } finally {
@@ -635,7 +643,7 @@ export default function TikTokAgent() {
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
-      {/* Header */}
+      {/* Header — cliquable pour ouvrir/fermer */}
       <div
         style={{
           ...card,
@@ -644,17 +652,26 @@ export default function TikTokAgent() {
           alignItems: "center",
           flexWrap: "wrap",
           gap: 12,
+          cursor: "pointer",
+          userSelect: "none",
         }}
+        onClick={() => setOuvert((v) => !v)}
       >
         <div>
           <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
             🎬 Agent TikTok — Restaurants parisiens
+            <span style={{ marginLeft: 10, fontSize: 12, color: colors.muted, fontWeight: 400 }}>
+              {ouvert ? "▲" : "▼"}
+            </span>
           </h2>
           <p style={{ fontSize: 13, color: colors.muted, margin: "4px 0 0" }}>
-            Génère 3 propositions de carrousels 9:16 par jour. Style FANOPA / guest_for_dinner.
+            {ouvert ? "Génère 3 propositions de carrousels 9:16 par jour. Style FANOPA / guest_for_dinner." : "Clique pour ouvrir le générateur"}
           </p>
         </div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div
+          style={{ display: "flex", gap: 10, alignItems: "center" }}
+          onClick={(e) => e.stopPropagation()}
+        >
           {historique.length > 0 && (
             <span style={{ fontSize: 11, color: colors.muted }}>
               {historique.length} restau{historique.length > 1 ? "s" : ""} vus
@@ -668,13 +685,13 @@ export default function TikTokAgent() {
               onClick={() => { setHistorique([]); setRestaurants([]); setSaved({}); }}
               style={{ ...btnGhost, fontSize: 11 }}
             >
-              Reset historique
+              Reset
             </button>
           )}
         </div>
       </div>
 
-      {error && (
+      {ouvert && error && (
         <div
           style={{
             background: "#2a0d0d",
@@ -706,7 +723,7 @@ export default function TikTokAgent() {
       )}
 
       {/* Propositions */}
-      {restaurants.map((r, rIdx) => {
+      {ouvert && restaurants.map((r, rIdx) => {
         const allImagesSelected = r.slides.every((s) => s.imageUrl);
         const isSaved = saved[rIdx];
 
