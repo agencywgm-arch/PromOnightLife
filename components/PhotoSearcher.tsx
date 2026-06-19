@@ -13,6 +13,9 @@ type Photo = {
   source: string;
   pageUrl?: string;
   isUGC?: boolean;
+  hd?: boolean;
+  width?: number;
+  height?: number;
 };
 
 type Slide = {
@@ -267,6 +270,9 @@ export default function PhotoSearcher() {
         source: p.source,
         pageUrl: p.pageUrl,
         isUGC: p.isUGC || false,
+        hd: p.hd || false,
+        width: p.width,
+        height: p.height,
       }));
       if (results.length === 0) setError("Aucun résultat trouvé.");
       else setPhotos(results);
@@ -461,6 +467,22 @@ export default function PhotoSearcher() {
                       padding: "2px 5px",
                     }}>
                       IG
+                    </span>
+                  )}
+                  {p.hd && !added && (
+                    <span style={{
+                      position: "absolute",
+                      bottom: 4,
+                      left: 4,
+                      background: "rgba(74,222,128,0.92)",
+                      color: "#04210f",
+                      borderRadius: 4,
+                      fontSize: 9,
+                      fontWeight: 800,
+                      padding: "1px 5px",
+                      letterSpacing: 0.3,
+                    }}>
+                      HD{p.width ? ` · ${Math.min(p.width, p.height || 0)}px` : ""}
                     </span>
                   )}
                   {added && (

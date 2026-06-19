@@ -37,6 +37,9 @@ type PexelsPhoto = {
   photographer: string;
   src: string;
   thumb: string;
+  hd?: boolean;
+  width?: number;
+  height?: number;
 };
 
 /* ─── Constantes ─────────────────────────────────────────────── */
@@ -126,7 +129,7 @@ function SlidePicker({
           );
           const serperData = await serperRes.json();
           const serperPicked = serperRes.ok
-            ? pickFresh<{ src: string; thumb: string; source: string; pageUrl?: string }>(
+            ? pickFresh<{ src: string; thumb: string; source: string; pageUrl?: string; hd?: boolean; width?: number; height?: number }>(
                 serperData.photos || [], PHOTOS_PAR_SLIDE)
             : [];
           if (serperPicked.length > 0) {
@@ -137,6 +140,9 @@ function SlidePicker({
                 photographer: p.source,
                 src: p.src,
                 thumb: p.thumb,
+                hd: p.hd,
+                width: p.width,
+                height: p.height,
               }))
             );
             setProvider("serper");
@@ -236,20 +242,29 @@ function SlidePicker({
             }}
           >
             {photos.map((p) => (
-              <img key={p.id} src={p.thumb} alt="" title={p.photographer}
-                onClick={() => setPreviewPhoto(p)}
-                onError={() => setPhotos((prev) => prev.filter((x) => x.id !== p.id))}
-                style={{
-                  width: "50px",
-                  height: "75px",
-                  objectFit: "cover",
-                  borderRadius: 5,
-                  cursor: "pointer",
-                  flexShrink: 0,
-                  scrollSnapAlign: "start",
-                  border: slide.imageUrl === p.src ? `2px solid ${colors.violet}` : "2px solid transparent",
-                  boxShadow: previewPhoto?.id === p.id ? `0 0 8px ${colors.violet}` : "none",
-                }} />
+              <div key={p.id} style={{ position: "relative", flexShrink: 0, scrollSnapAlign: "start" }}>
+                <img src={p.thumb} alt="" title={p.width ? `${p.width}×${p.height}` : p.photographer}
+                  onClick={() => setPreviewPhoto(p)}
+                  onError={() => setPhotos((prev) => prev.filter((x) => x.id !== p.id))}
+                  style={{
+                    width: "50px",
+                    height: "75px",
+                    objectFit: "cover",
+                    borderRadius: 5,
+                    cursor: "pointer",
+                    display: "block",
+                    border: slide.imageUrl === p.src ? `2px solid ${colors.violet}` : "2px solid transparent",
+                    boxShadow: previewPhoto?.id === p.id ? `0 0 8px ${colors.violet}` : "none",
+                  }} />
+                {p.hd && (
+                  <span style={{
+                    position: "absolute", top: 3, left: 3,
+                    background: "rgba(74,222,128,0.92)", color: "#04210f",
+                    fontSize: 7, fontWeight: 800, borderRadius: 3, padding: "1px 3px",
+                    letterSpacing: 0.3,
+                  }}>HD</span>
+                )}
+              </div>
             ))}
           </div>
         </>
