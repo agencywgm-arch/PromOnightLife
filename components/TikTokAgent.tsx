@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createContenu } from "@/lib/actions";
 import { snapshotImage } from "@/lib/imageSnapshot";
 import { card, btnPrimary, btnGhost, input, colors } from "@/lib/ui";
+import Loader3D from "@/components/Loader3D";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 
@@ -201,9 +202,7 @@ function SlidePicker({
       </div>
 
       {!searched && (
-        <div style={{ marginTop: 8, fontSize: 12, color: colors.muted }}>
-          🔍 Recherche d'images en cours…
-        </div>
+        <Loader3D compact label="Recherche des photos HD" />
       )}
 
       {error && (
@@ -766,6 +765,10 @@ export default function TikTokAgent() {
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
+      {/* Overlays 3D immersifs pendant les temps de chargement */}
+      {loading && <Loader3D fullscreen label="L'agent sélectionne 3 restaurants" />}
+      {composing !== null && <Loader3D fullscreen label="Composition du carrousel en cours" />}
+
       {/* Header — cliquable pour ouvrir/fermer */}
       <div
         style={{
@@ -782,13 +785,13 @@ export default function TikTokAgent() {
       >
         <div>
           <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
-            🎬 Agent TikTok — Restaurants parisiens
+            🪄 Agent IA — Restaurants parisiens
             <span style={{ marginLeft: 10, fontSize: 12, color: colors.muted, fontWeight: 400 }}>
               {ouvert ? "▲" : "▼"}
             </span>
           </h2>
           <p style={{ fontSize: 13, color: colors.muted, margin: "4px 0 0" }}>
-            {ouvert ? "Génère 3 propositions de carrousels 9:16 par jour. Style FANOPA / guest_for_dinner." : "Clique pour ouvrir le générateur"}
+            {ouvert ? "L'IA choisit 3 restaurants et trouve les photos pour toi. Carrousels 9:16 prêts à publier." : "Clique pour ouvrir l'agent IA"}
           </p>
         </div>
         <div

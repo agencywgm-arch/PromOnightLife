@@ -49,25 +49,25 @@ export async function requireAuth(): Promise<Session> {
   const existing = await readSession();
   if (existing) return existing;
 
-  let promoteur = await prisma.promoteur.findFirst();
-  if (!promoteur) {
-    promoteur = await prisma.promoteur.create({
-      data: {
-        email: "promoteur@nightlife-paris.fr",
-        password: await bcrypt.hash("nightlife2026", 10),
-        nom: "Promoteur",
-      },
-    });
+  // Résilience : si la DB est lente/indisponible, on ne plante PAS le rendu
+  // (sinon écran noir). On renvoie une session minimale ; les écritures
+  // réelles se feront quand la DB répond.
+  try {
+    let promoteur = await prisma.promoteur.findFirst();
+    if (!promoteur) {
+      promoteur = await prisma.promoteur.create({
+        data: {
+          email: "promoteur@nightlife-paris.fr",
+          password: await bcrypt.hash("nightlife2026", 10),
+          nom: "Promoteur",
+        },
+      });
+    }
+    return { promoteurId: promoteur.id, email: promoteur.email, nom: promoteur.nom };
+  } catch (e) {
+    console.error("[auth] requireAuth DB indisponible :", e);
+    return { promoteurId: "offline", email: "offline", nom: "Promoteur" };
   }
-
-  const session: Session = {
-    promoteurId: promoteur.id,
-    email: promoteur.email,
-    nom: promoteur.nom,
-  };
-  // Note : impossible d'écrire un cookie pendant le rendu d'un Server Component ;
-  // la session est simplement retournée. Le cookie est posé lors du login explicite.
-  return session;
 }
 
 export async function verifyCredentials(

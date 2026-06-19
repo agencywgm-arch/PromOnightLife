@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { card, btnPrimary, btnGhost, input, colors } from "@/lib/ui";
+import Loader3D from "@/components/Loader3D";
 import { createContenu } from "@/lib/actions";
 import { snapshotImage } from "@/lib/imageSnapshot";
 import { useRouter } from "next/navigation";
@@ -384,11 +385,14 @@ export default function PhotoSearcher() {
 
   return (
     <div style={card}>
+      {composing && <Loader3D fullscreen label="Composition du carrousel en cours" />}
+
       <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 4px", color: colors.texte }}>
-        🔍 Chercheur de photos
+        🎨 Générateur manuel
       </h3>
       <p style={{ fontSize: 12, color: colors.muted, margin: "0 0 12px", lineHeight: 1.5 }}>
-        Cherche des photos, sélectionne jusqu&apos;à 4, ajoute les titres, et compose le carrousel.
+        Toi qui cherches : tape un mot-clé, choisis jusqu&apos;à 4 photos, ajoute les
+        titres et compose ton carrousel à la main.
       </p>
 
       {/* Barre de recherche */}
@@ -413,6 +417,8 @@ export default function PhotoSearcher() {
       {error && (
         <p style={{ fontSize: 12, color: colors.rouge, margin: "8px 0" }}>⚠️ {error}</p>
       )}
+
+      {loading && <Loader3D compact label="Recherche des photos HD" />}
 
       {/* Grille de résultats */}
       {photos.length > 0 && (
