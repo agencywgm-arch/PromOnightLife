@@ -87,6 +87,7 @@ model Contenu {
   hashtags        String?
   platform        String    @default("TIKTOK") // TIKTOK | INSTAGRAM
   statut          String    @default("EN_ATTENTE") // EN_ATTENTE | VALIDE | EXPORTE | REFUSE
+  auto            Boolean   @default(false) // généré automatiquement par le cron quotidien
   exportedAt      DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -98,4 +99,17 @@ model AgentConfig {
   active    Boolean  @default(false)
   values    String   @default("{}") // JSON string
   updatedAt DateTime @updatedAt
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  // Heure d'envoi quotidien souhaitée (0-23, heure de Paris). Défaut 9h.
+  hour      Int      @default(9)
+  enabled   Boolean  @default(true)
+  userAgent String?
+  createdAt DateTime @default(now())
+  lastSentAt DateTime?
 }
