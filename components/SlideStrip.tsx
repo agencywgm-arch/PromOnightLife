@@ -13,47 +13,53 @@ export default function SlideStrip({
   const rendered = slides.filter((s) => s.imageData);
   if (rendered.length === 0) return null;
 
-  async function shareAll() {
-    try {
-      // Convertir chaque data URL en File
-      const files: File[] = await Promise.all(
-        rendered.map(async (s, i) => {
-          const res = await fetch(s.imageData!);
-          const blob = await res.blob();
-          return new File(
-            [blob],
-            `${restaurant.replace(/\s+/g, "_")}_slide_${i + 1}.jpg`,
-            { type: "image/jpeg" }
-          );
-        })
-      );
+  // Convertit une data URL en File SANS fetch (synchrone) — indispensable sur
+  // iOS : navigator.share() doit être appelé dans le même geste tactile, sinon
+  // Safari invalide le partage (NotAllowedError). Un await fetch casse ce geste.
+  function dataUrlToFile(dataUrl: string, filename: string): File {
+    const comma = dataUrl.indexOf(",");
+    const header = dataUrl.slice(0, comma);
+    const base64 = dataUrl.slice(comma + 1);
+    const mime = header.match(/:(.*?);/)?.[1] || "image/jpeg";
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new File([bytes], filename, { type: mime });
+  }
 
-      // Web Share API — ouvre le menu natif iOS/Android
-      if (navigator.canShare && navigator.canShare({ files })) {
-        await navigator.share({
-          files,
-          title: restaurant,
-        });
-      } else {
-        // Fallback navigateur desktop : téléchargement séquentiel
-        for (let i = 0; i < files.length; i++) {
-          const url = URL.createObjectURL(files[i]);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = files[i].name;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(url), 2000);
-          await new Promise((r) => setTimeout(r, 400));
+  function shareAll() {
+    const name = (i: number) =>
+      `${restaurant.replace(/\s+/g, "_")}_slide_${i + 1}.jpg`;
+
+    // Conversion 100% synchrone : le geste tactile reste valide pour iOS.
+    const files = rendered.map((s, i) => dataUrlToFile(s.imageData!, name(i)));
+
+    // Web Share API — ouvre le menu natif iOS (« Enregistrer dans Photos »).
+    if (
+      typeof navigator !== "undefined" &&
+      navigator.canShare &&
+      navigator.canShare({ files })
+    ) {
+      // On appelle share() immédiatement, dans le geste. Pas d'await avant.
+      navigator.share({ files, title: restaurant }).catch((e) => {
+        if (e instanceof Error && e.name !== "AbortError") {
+          console.error("Erreur partage :", e);
         }
-      }
-    } catch (e) {
-      // L'utilisateur a annulé le partage — pas d'erreur à afficher
-      if (e instanceof Error && e.name !== "AbortError") {
-        console.error("Erreur partage :", e);
-      }
+      });
+      return;
     }
+
+    // Fallback desktop : téléchargement séquentiel via Blob URLs.
+    files.forEach((file, i) => {
+      const url = URL.createObjectURL(file);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000 + i * 400);
+    });
   }
 
   return (

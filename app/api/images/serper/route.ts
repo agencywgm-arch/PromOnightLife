@@ -66,14 +66,10 @@ async function searchSerper(key: string, q: string, num: number): Promise<Serper
   });
   if (!res.ok) return [];
   const data = await res.json();
-  return (data.images || []).filter((img: SerperImage) => {
-    // Filtre côté serveur : écarter les images sans dimensions ou trop petites
-    const w = img.imageWidth || 0;
-    const h = img.imageHeight || 0;
-    if (!w || !h) return false;
-    // Garde seulement si une dimension atteint 1080 minimum
-    return Math.min(w, h) >= HD_SHORT_SIDE;
-  });
+  // On ne filtre PAS ici : on garde tout et on trie/filtre en aval. Beaucoup
+  // d'images Instagram (1080px natif) ne déclarent pas leurs dimensions ;
+  // les écarter au ras de la source vide les résultats des petits restos.
+  return data.images || [];
 }
 
 /**
@@ -103,21 +99,22 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // 3 requêtes en parallèle :
-    // 1. Recherche exacte du restaurant
-    // 2. Restaurant sur Instagram (authentiques, non-recyclées)
-    // 3. Restaurant sur TripAdvisor/avis (photos vérifiées de clients)
-    // On en demande beaucoup (50 chacune) pour avoir du choix après filtrage HD strict.
-    const [exactMatch, instaPhotos, reviewPhotos] = await Promise.all([
-      searchSerper(key, `"${q}" restaurant`, 50),
-      searchSerper(key, `${q} site:instagram.com`, 50),
-      searchSerper(key, `${q} site:tripadvisor.com`, 50),
+    // 3 requêtes en parallèle, SANS opérateur site: (qui vide les résultats
+    // Google Images). Mots-clés « instagram » / « restaurant » suffisent à
+    // remonter les photos UGC hébergées sur ces réseaux et indexées par Google.
+    //   1. Nom exact du restaurant
+    //   2. Variante sociale (vraies photos de visiteurs)
+    //   3. Variante plats/intérieur (cadrage cohérent pour un carrousel)
+    const [exactMatch, instaPhotos, dishPhotos] = await Promise.all([
+      searchSerper(key, `"${q}" restaurant paris`, 40),
+      searchSerper(key, `${q} restaurant instagram`, 40),
+      searchSerper(key, `${q} restaurant plat intérieur`, 40),
     ]);
 
-    // Déduplique par imageUrl : Instagram/TripAdvisor (authentiques) d'abord, puis recherche exacte
+    // Déduplique par imageUrl : social d'abord (authentique), puis recherche exacte
     const seen = new Set<string>();
     const allImages: SerperImage[] = [];
-    for (const img of [...instaPhotos, ...reviewPhotos, ...exactMatch]) {
+    for (const img of [...instaPhotos, ...exactMatch, ...dishPhotos]) {
       if (img.imageUrl && !seen.has(img.imageUrl)) {
         seen.add(img.imageUrl);
         allImages.push(img);
@@ -129,19 +126,27 @@ export async function GET(req: NextRequest) {
     // Authentiques (Instagram/Maps/TripAdvisor = vraies photos du lieu) d'abord,
     // puis à résolution décroissante.
     const byAuthThenRes = (a: SerperImage, b: SerperImage) => {
-      const ua = isUGC(a.link, a.source) ? 2 : 0; // Heavy weight on UGC
+      const ua = isUGC(a.link, a.source) ? 2 : 0; // poids fort sur l'authentique
       const ub = isUGC(b.link, b.source) ? 2 : 0;
       if (ua !== ub) return ub - ua;
-      // Tiebreaker: by pixel count (more megapixels = better)
-      return pixels(b) - pixels(a);
+      return pixels(b) - pixels(a); // sinon, la plus haute résolution d'abord
     };
 
-    // On ne garde que la vraie haute définition — ZÉRO compromis.
+    // Tiers de qualité : HD d'abord, puis correct, puis le reste. On affiche
+    // toujours quelque chose (jamais zéro), mais le HD remonte systématiquement
+    // en tête et porte le badge HD côté UI.
     const hd = allImages.filter(isHD).sort(byAuthThenRes);
+    const soft = allImages
+      .filter((img) => !hd.includes(img) && isAcceptable(img))
+      .sort(byAuthThenRes);
+    const rest = allImages
+      .filter((img) => !hd.includes(img) && !soft.includes(img))
+      .sort(byAuthThenRes);
 
-    // Pas de fallback tier : on retourne seulement ce qui est certifié HD.
-    // Si trop peu de résultats, c'est mieux que de diluer avec de la mauvaise qualité.
-    const photos: PhotoResult[] = hd.slice(0, 40).map((img, i) => {
+    // Mode qualité : si on a déjà assez de HD, on ne dilue pas avec le reste.
+    const pool = hd.length >= 8 ? hd : [...hd, ...soft, ...rest];
+
+    const photos: PhotoResult[] = pool.slice(0, 40).map((img, i) => {
       const short = Math.min(img.imageWidth || 0, img.imageHeight || 0);
       return {
         id: `serper-${i}`,
