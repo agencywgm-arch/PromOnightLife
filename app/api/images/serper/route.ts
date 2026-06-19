@@ -114,11 +114,26 @@ export async function GET(req: NextRequest) {
     // Déduplique par imageUrl : social d'abord (authentique), puis recherche exacte
     const seen = new Set<string>();
     const allImages: SerperImage[] = [];
-    for (const img of [...instaPhotos, ...exactMatch, ...dishPhotos]) {
-      if (img.imageUrl && !seen.has(img.imageUrl)) {
-        seen.add(img.imageUrl);
-        allImages.push(img);
+    const collect = (imgs: SerperImage[]) => {
+      for (const img of imgs) {
+        if (img.imageUrl && !seen.has(img.imageUrl)) {
+          seen.add(img.imageUrl);
+          allImages.push(img);
+        }
       }
+    };
+    collect([...instaPhotos, ...exactMatch, ...dishPhotos]);
+
+    // Filet de sécurité : si le nom exact ne donne rien (resto peu connu, nom
+    // mal orthographié…), on relâche progressivement la recherche pour ne
+    // JAMAIS renvoyer zéro photo tant que Google a quelque chose.
+    if (allImages.length === 0) {
+      const [loose1, loose2, loose3] = await Promise.all([
+        searchSerper(key, `${q} restaurant paris`, 40),
+        searchSerper(key, `${q} paris`, 40),
+        searchSerper(key, q, 40),
+      ]);
+      collect([...loose1, ...loose2, ...loose3]);
     }
 
     const pixels = (img: SerperImage) => (img.imageWidth || 0) * (img.imageHeight || 0);

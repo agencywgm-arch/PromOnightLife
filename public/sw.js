@@ -12,7 +12,7 @@ self.addEventListener("push", (event) => {
     data = { title: "NIGHTLIFE PARIS", body: event.data ? event.data.text() : "" };
   }
 
-  const title = data.title || "🌙 NIGHTLIFE PARIS";
+  const title = data.title || "🗼 NIGHTLIFE PARIS";
   const options = {
     body: data.body || "",
     icon: "/icon-192.png",
