@@ -122,36 +122,55 @@ async function composeSlide(slide: Slide, canvas: HTMLCanvasElement): Promise<st
   ctx.fillStyle = grad;
   ctx.fillRect(0, H * 0.5, W, H * 0.5);
 
-  const bubbleX = 60;
-  const bubbleW = W - 120;
-  const MARGIN_BOT = 72;
+  // Zone sûre TikTok/Reels (hors UI : back/search en haut, like/share à
+  // droite, légende/musique en bas) : 720x1000px, ancrée à gauche=160, bas=1350.
+  const SAFE_X = 160;
+  const SAFE_W = 720;
+  const SAFE_TOP = 350;
+  const SAFE_BOTTOM = 1350;
+  const SAFE_H = SAFE_BOTTOM - SAFE_TOP;
+
+  const bubbleX = SAFE_X;
+  const bubbleW = SAFE_W;
   const GAP = 14;
-  const titleSize = slide.titre
+  let titleSize = slide.titre
     ? slide.titre.length > 50 ? 48 : slide.titre.length > 30 ? 56 : 64
     : 0;
-  const lineHT = titleSize * 1.35;
-  const stSize = 40;
-  const lineHST = stSize * 1.35;
+  let stSize = 40;
   const PAD = 28;
 
-  let titleLines: string[] = [];
-  let stLines: string[] = [];
-  let titleBH = 0;
-  let stBH = 0;
-
-  if (slide.sousTitre) {
-    ctx.font = `500 ${stSize}px -apple-system, Arial, sans-serif`;
-    stLines = wrapText(ctx, slide.sousTitre, bubbleW - 56);
-    stBH = stLines.length * lineHST + PAD;
+  function measure(tSize: number, sSize: number) {
+    const lHT = tSize * 1.35;
+    const lHST = sSize * 1.35;
+    let tLines: string[] = [];
+    let sLines: string[] = [];
+    if (slide.sousTitre) {
+      ctx.font = `500 ${sSize}px -apple-system, Arial, sans-serif`;
+      sLines = wrapText(ctx, slide.sousTitre, bubbleW - 56);
+    }
+    if (slide.titre) {
+      ctx.font = `bold ${tSize}px -apple-system, Arial, sans-serif`;
+      tLines = wrapText(ctx, slide.titre, bubbleW - 56);
+    }
+    const sBH = sLines.length ? sLines.length * lHST + PAD : 0;
+    const tBH = tLines.length ? tLines.length * lHT + PAD : 0;
+    return { tLines, sLines, tBH, sBH, lHT, lHST };
   }
-  if (slide.titre) {
-    ctx.font = `bold ${titleSize}px -apple-system, Arial, sans-serif`;
-    titleLines = wrapText(ctx, slide.titre, bubbleW - 56);
-    titleBH = titleLines.length * lineHT + PAD;
+
+  let { tLines: titleLines, sLines: stLines, tBH: titleBH, sBH: stBH, lHT: lineHT, lHST: lineHST } =
+    measure(titleSize, stSize);
+
+  const totalH = titleBH + (stBH > 0 ? GAP + stBH : 0);
+  if (totalH > SAFE_H) {
+    const scale = SAFE_H / totalH;
+    titleSize = Math.max(34, Math.round(titleSize * scale));
+    stSize = Math.max(26, Math.round(stSize * scale));
+    ({ tLines: titleLines, sLines: stLines, tBH: titleBH, sBH: stBH, lHT: lineHT, lHST: lineHST } =
+      measure(titleSize, stSize));
   }
 
-  const stTop = H - MARGIN_BOT - stBH;
-  const titleTop = stBH > 0 ? stTop - GAP - titleBH : H - MARGIN_BOT - titleBH;
+  const stTop = SAFE_BOTTOM - stBH;
+  const titleTop = Math.max(SAFE_TOP, stBH > 0 ? stTop - GAP - titleBH : SAFE_BOTTOM - titleBH);
 
   if (slide.sousTitre && stBH > 0) {
     ctx.save();
