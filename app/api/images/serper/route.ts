@@ -66,7 +66,14 @@ async function searchSerper(key: string, q: string, num: number): Promise<Serper
   });
   if (!res.ok) return [];
   const data = await res.json();
-  return data.images || [];
+  return (data.images || []).filter((img: SerperImage) => {
+    // Filtre côté serveur : écarter les images sans dimensions ou trop petites
+    const w = img.imageWidth || 0;
+    const h = img.imageHeight || 0;
+    if (!w || !h) return false;
+    // Garde seulement si une dimension atteint 1080 minimum
+    return Math.min(w, h) >= HD_SHORT_SIDE;
+  });
 }
 
 /**
@@ -96,17 +103,21 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // 2 requêtes en parallèle : web standard + UGC social.
-    // On en demande beaucoup (40 chacune) pour avoir du choix après filtrage qualité.
-    const [webImages, ugcImages] = await Promise.all([
-      searchSerper(key, q, 40),
-      searchSerper(key, `${q} instagram`, 40),
+    // 3 requêtes en parallèle :
+    // 1. Recherche exacte du restaurant
+    // 2. Restaurant sur Instagram (authentiques, non-recyclées)
+    // 3. Restaurant sur TripAdvisor/avis (photos vérifiées de clients)
+    // On en demande beaucoup (50 chacune) pour avoir du choix après filtrage HD strict.
+    const [exactMatch, instaPhotos, reviewPhotos] = await Promise.all([
+      searchSerper(key, `"${q}" restaurant`, 50),
+      searchSerper(key, `${q} site:instagram.com`, 50),
+      searchSerper(key, `${q} site:tripadvisor.com`, 50),
     ]);
 
-    // Déduplique par imageUrl, UGC d'abord
+    // Déduplique par imageUrl : Instagram/TripAdvisor (authentiques) d'abord, puis recherche exacte
     const seen = new Set<string>();
     const allImages: SerperImage[] = [];
-    for (const img of [...ugcImages, ...webImages]) {
+    for (const img of [...instaPhotos, ...reviewPhotos, ...exactMatch]) {
       if (img.imageUrl && !seen.has(img.imageUrl)) {
         seen.add(img.imageUrl);
         allImages.push(img);
@@ -114,34 +125,23 @@ export async function GET(req: NextRequest) {
     }
 
     const pixels = (img: SerperImage) => (img.imageWidth || 0) * (img.imageHeight || 0);
+
     // Authentiques (Instagram/Maps/TripAdvisor = vraies photos du lieu) d'abord,
     // puis à résolution décroissante.
     const byAuthThenRes = (a: SerperImage, b: SerperImage) => {
-      const ua = isUGC(a.link, a.source) ? 1 : 0;
-      const ub = isUGC(b.link, b.source) ? 1 : 0;
+      const ua = isUGC(a.link, a.source) ? 2 : 0; // Heavy weight on UGC
+      const ub = isUGC(b.link, b.source) ? 2 : 0;
       if (ua !== ub) return ub - ua;
+      // Tiebreaker: by pixel count (more megapixels = better)
       return pixels(b) - pixels(a);
     };
 
-    // On ne garde QUE la vraie haute définition.
+    // On ne garde que la vraie haute définition — ZÉRO compromis.
     const hd = allImages.filter(isHD).sort(byAuthThenRes);
 
-    // Repli progressif si trop peu de HD : images correctes, puis le reste.
-    let pool = hd;
-    if (pool.length < 6) {
-      const soft = allImages
-        .filter((img) => !hd.includes(img) && isAcceptable(img))
-        .sort(byAuthThenRes);
-      pool = [...hd, ...soft];
-    }
-    if (pool.length < 6) {
-      const rest = allImages
-        .filter((img) => !pool.includes(img) && pixels(img) > 0)
-        .sort(byAuthThenRes);
-      pool = [...pool, ...rest];
-    }
-
-    const photos: PhotoResult[] = pool.slice(0, 40).map((img, i) => {
+    // Pas de fallback tier : on retourne seulement ce qui est certifié HD.
+    // Si trop peu de résultats, c'est mieux que de diluer avec de la mauvaise qualité.
+    const photos: PhotoResult[] = hd.slice(0, 40).map((img, i) => {
       const short = Math.min(img.imageWidth || 0, img.imageHeight || 0);
       return {
         id: `serper-${i}`,
