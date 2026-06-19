@@ -102,18 +102,42 @@ async function composeSlide(slide: Slide, canvas: HTMLCanvasElement): Promise<st
         }
       }
 
-      const scale = Math.max(W / img.naturalWidth, H / img.naturalHeight);
-      const targetW = Math.round(img.naturalWidth * scale);
-      const targetH = Math.round(img.naturalHeight * scale);
-
-      // Upscaling progressif par étapes de 2x — bien meilleure qualité que 1 seul saut
+      const iw = img.naturalWidth;
+      const ih = img.naturalHeight;
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
 
+      // 1) Fond flou plein cadre : masque les agrandissements et évite tout bord
+      //    vide. Astuce universelle (compatible iOS) : on réduit l'image très
+      //    petit puis on l'étire — le lissage du navigateur crée un flou propre.
+      const bg = document.createElement("canvas");
+      bg.width = 80;
+      bg.height = Math.round((80 * H) / W);
+      const bgCtx = bg.getContext("2d")!;
+      const bgScale = Math.max(bg.width / iw, bg.height / ih);
+      bgCtx.drawImage(
+        img,
+        (bg.width - iw * bgScale) / 2,
+        (bg.height - ih * bgScale) / 2,
+        iw * bgScale,
+        ih * bgScale
+      );
+      ctx.drawImage(bg, 0, 0, W, H);
+      ctx.fillStyle = "rgba(8,8,14,0.45)"; // voile sombre (contraste + uniformité)
+      ctx.fillRect(0, 0, W, H);
+
+      // 2) Photo NETTE en "contain" : toute la photo visible, zoom minimal.
+      //    Calée vers le haut pour dégager la zone de texte en bas.
+      const fit = Math.min(W / iw, H / ih);
+      const targetW = Math.round(iw * fit);
+      const targetH = Math.round(ih * fit);
+
+      // Agrandissement progressif par paliers de 2x seulement si l'on doit
+      // dépasser la résolution native (bien plus net qu'un seul saut).
       let source: HTMLImageElement | HTMLCanvasElement = img;
-      if (scale > 1.5) {
-        let curW = img.naturalWidth;
-        let curH = img.naturalHeight;
+      if (fit > 1.5) {
+        let curW = iw;
+        let curH = ih;
         let cur: HTMLImageElement | HTMLCanvasElement = img;
         while (curW * 2 < targetW || curH * 2 < targetH) {
           const nextW = Math.min(curW * 2, targetW);
@@ -132,7 +156,9 @@ async function composeSlide(slide: Slide, canvas: HTMLCanvasElement): Promise<st
         source = cur;
       }
 
-      ctx.drawImage(source, (W - targetW) / 2, (H - targetH) / 2, targetW, targetH);
+      const dx = Math.round((W - targetW) / 2);
+      const dy = Math.min(Math.round((H - targetH) / 2), Math.round(H * 0.04));
+      ctx.drawImage(source, dx, dy, targetW, targetH);
     } catch {
       const g = ctx.createLinearGradient(0, 0, W, H);
       g.addColorStop(0, "#1a0a2e");
@@ -666,7 +692,7 @@ export default function PhotoSearcher() {
                 src={previewStage === 0 ? previewPhoto.src : previewPhoto.thumb}
                 alt="Preview"
                 onError={() => setPreviewStage((s) => (s === 0 ? 1 : 2) as 0 | 1 | 2)}
-                style={{ width: "100%", height: "auto", maxHeight: "85vh", objectFit: "cover", borderRadius: 12, zoom: 1.1 }}
+                style={{ width: "100%", height: "auto", maxHeight: "85vh", objectFit: "contain", borderRadius: 12 }}
               />
             ) : (
               <div
