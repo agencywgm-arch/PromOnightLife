@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { card, btnPrimary, btnGhost, input, colors } from "@/lib/ui";
 import { createContenu } from "@/lib/actions";
 import { useRouter } from "next/navigation";
@@ -190,6 +190,11 @@ export default function PhotoSearcher() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<Photo | null>(null);
+  const [previewStage, setPreviewStage] = useState<0 | 1 | 2>(0);
+
+  useEffect(() => {
+    setPreviewStage(0);
+  }, [previewPhoto]);
   const [slides, setSlides] = useState<Slide[]>([]);
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState("");
@@ -381,6 +386,7 @@ export default function PhotoSearcher() {
                   <img
                     src={p.thumb}
                     alt={`Photo ${p.id}`}
+                    onError={() => setPhotos((prev) => prev.filter((x) => x.id !== p.id))}
                     style={{
                       width: 90,
                       height: 135,
@@ -578,31 +584,68 @@ export default function PhotoSearcher() {
               alignItems: "center",
             }}
           >
-            <img
-              src={previewPhoto.src}
-              alt="Preview"
-              style={{ maxWidth: "100%", maxHeight: "65vh", objectFit: "contain", borderRadius: 8 }}
-            />
+            {previewStage < 2 ? (
+              <img
+                src={previewStage === 0 ? previewPhoto.src : previewPhoto.thumb}
+                alt="Preview"
+                onError={() => setPreviewStage((s) => (s === 0 ? 1 : 2) as 0 | 1 | 2)}
+                style={{ width: "100%", height: "auto", maxHeight: "85vh", objectFit: "cover", borderRadius: 12, zoom: 1.1 }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "min(70vw, 320px)",
+                  padding: "32px 16px",
+                  textAlign: "center",
+                  background: "#1a1a24",
+                  borderRadius: 8,
+                  border: `1px solid ${colors.border}`,
+                }}
+              >
+                <div style={{ fontSize: 28, marginBottom: 8 }}>🚫</div>
+                <div style={{ fontSize: 13, color: colors.texte, fontWeight: 600, marginBottom: 4 }}>
+                  Image indisponible
+                </div>
+                <div style={{ fontSize: 11, color: colors.muted, lineHeight: 1.4 }}>
+                  Cette photo ne peut plus être chargée (lien expiré ou bloqué). Choisis une autre photo dans la liste.
+                </div>
+              </div>
+            )}
             <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-              <button
-                onClick={() => addToCarousel(previewPhoto)}
-                disabled={slides.length >= 4 || isInCarousel(previewPhoto)}
-                style={{ ...btnPrimary, fontSize: 12 }}
-              >
-                {isInCarousel(previewPhoto)
-                  ? "✓ Déjà dans le carrousel"
-                  : slides.length >= 4
-                    ? "Maximum 4 slides"
-                    : "➕ Ajouter au carrousel"}
-              </button>
-              <a
-                href={previewPhoto.src}
-                download={`photo_${previewPhoto.id}.jpg`}
-                onClick={(e) => e.stopPropagation()}
-                style={{ ...btnGhost, fontSize: 12, textDecoration: "none" }}
-              >
-                ⬇️ Télécharger
-              </a>
+              {previewStage < 2 && (
+                <button
+                  onClick={() => addToCarousel(previewPhoto)}
+                  disabled={slides.length >= 4 || isInCarousel(previewPhoto)}
+                  style={{ ...btnPrimary, fontSize: 12 }}
+                >
+                  {isInCarousel(previewPhoto)
+                    ? "✓ Déjà dans le carrousel"
+                    : slides.length >= 4
+                      ? "Maximum 4 slides"
+                      : "➕ Ajouter au carrousel"}
+                </button>
+              )}
+              {previewStage < 2 && (
+                <a
+                  href={previewPhoto.src}
+                  download={`photo_${previewPhoto.id}.jpg`}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ ...btnGhost, fontSize: 12, textDecoration: "none" }}
+                >
+                  ⬇️ Télécharger
+                </a>
+              )}
+              {previewPhoto.pageUrl && (
+                <a
+                  href={previewPhoto.pageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ ...btnGhost, fontSize: 12, textDecoration: "none" }}
+                >
+                  🔗 Voir la source
+                </a>
+              )}
               <button onClick={() => setPreviewPhoto(null)} style={{ ...btnGhost, fontSize: 12 }}>
                 ✕ Fermer
               </button>

@@ -102,6 +102,11 @@ function SlidePicker({
   const [error, setError] = useState<ReactNode | null>(null);
   const [customUrl, setCustomUrl] = useState("");
   const [previewPhoto, setPreviewPhoto] = useState<PexelsPhoto | null>(null);
+  const [previewStage, setPreviewStage] = useState<0 | 1 | 2>(0);
+
+  useEffect(() => {
+    setPreviewStage(0);
+  }, [previewPhoto]);
 
   const googleImagesUrl = `https://www.google.com/search?q=${encodeURIComponent(`"${restaurantNom}" restaurant Paris`)}&tbm=isch&hl=fr`;
 
@@ -231,6 +236,7 @@ function SlidePicker({
             {photos.map((p) => (
               <img key={p.id} src={p.thumb} alt="" title={p.photographer}
                 onClick={() => setPreviewPhoto(p)}
+                onError={() => setPhotos((prev) => prev.filter((x) => x.id !== p.id))}
                 style={{
                   width: "50px",
                   height: "75px",
@@ -321,29 +327,65 @@ function SlidePicker({
               gap: 12,
             }}
           >
-            <img
-              src={previewPhoto.src}
-              alt="Preview"
-              style={{
-                maxWidth: "100%",
-                maxHeight: "70vh",
-                objectFit: "contain",
-                borderRadius: 8,
-              }}
-            />
-            <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-              <button
-                onClick={() => {
-                  onSelect(restaurantIndex, slideIndex, previewPhoto.src, `© ${previewPhoto.photographer}`);
-                  setPreviewPhoto(null);
-                }}
+            {previewStage < 2 ? (
+              <img
+                src={previewStage === 0 ? previewPhoto.src : previewPhoto.thumb}
+                alt="Preview"
+                onError={() => setPreviewStage((s) => (s === 0 ? 1 : 2) as 0 | 1 | 2)}
                 style={{
-                  ...btnPrimary,
-                  fontSize: 12,
+                  width: "100%",
+                  height: "auto",
+                  maxHeight: "85vh",
+                  objectFit: "cover",
+                  borderRadius: 12,
+                  zoom: 1.1,
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "min(70vw, 320px)",
+                  padding: "32px 16px",
+                  textAlign: "center",
+                  background: "#1a1a24",
+                  borderRadius: 8,
+                  border: `1px solid ${colors.border}`,
                 }}
               >
-                ✓ Sélectionner cette image
-              </button>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>🚫</div>
+                <div style={{ fontSize: 13, color: colors.texte, fontWeight: 600, marginBottom: 4 }}>
+                  Image indisponible
+                </div>
+                <div style={{ fontSize: 11, color: colors.muted, lineHeight: 1.4 }}>
+                  Cette photo ne peut plus être chargée (lien expiré ou bloqué). Choisis une autre photo dans la liste.
+                </div>
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+              {previewStage < 2 && (
+                <button
+                  onClick={() => {
+                    onSelect(restaurantIndex, slideIndex, previewPhoto.src, `© ${previewPhoto.photographer}`);
+                    setPreviewPhoto(null);
+                  }}
+                  style={{
+                    ...btnPrimary,
+                    fontSize: 12,
+                  }}
+                >
+                  ✓ Sélectionner cette image
+                </button>
+              )}
+              {previewPhoto.pageUrl && (
+                <a
+                  href={previewPhoto.pageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ ...btnGhost, fontSize: 12, textDecoration: "none" }}
+                >
+                  🔗 Voir la source
+                </a>
+              )}
               <button
                 onClick={() => setPreviewPhoto(null)}
                 style={{
