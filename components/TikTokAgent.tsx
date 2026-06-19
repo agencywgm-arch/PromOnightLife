@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createContenu } from "@/lib/actions";
 import { snapshotImage } from "@/lib/imageSnapshot";
 import { card, btnPrimary, btnGhost, input, colors } from "@/lib/ui";
+import Loader3D from "@/components/Loader3D";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 
@@ -201,9 +202,7 @@ function SlidePicker({
       </div>
 
       {!searched && (
-        <div style={{ marginTop: 8, fontSize: 12, color: colors.muted }}>
-          🔍 Recherche d'images en cours…
-        </div>
+        <Loader3D compact label="Recherche des photos HD" />
       )}
 
       {error && (
@@ -766,6 +765,10 @@ export default function TikTokAgent() {
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
+      {/* Overlays 3D immersifs pendant les temps de chargement */}
+      {loading && <Loader3D fullscreen label="L'agent sélectionne 3 restaurants" />}
+      {composing !== null && <Loader3D fullscreen label="Composition du carrousel en cours" />}
+
       {/* Header — cliquable pour ouvrir/fermer */}
       <div
         style={{
