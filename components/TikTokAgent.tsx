@@ -12,6 +12,7 @@ type AgentSlide = {
   sousTitre: string;
   searchQuery: string;
   imageUrl?: string;   // URL image choisie
+  imageThumb?: string; // miniature (fallback fiable si l'originale expire)
   imageSrc?: string;   // crédits source
   imageData?: string;  // base64 rendu canvas
 };
@@ -93,7 +94,7 @@ function SlidePicker({
   restaurantIndex: number;
   restaurantNom: string;
   restaurantAdresse: string;
-  onSelect: (rIdx: number, sIdx: number, url: string, src: string) => void;
+  onSelect: (rIdx: number, sIdx: number, url: string, src: string, thumb?: string) => void;
 }) {
   const [photos, setPhotos] = useState<PexelsPhoto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -283,7 +284,8 @@ function SlidePicker({
             const u = customUrl.trim();
             if (u) {
               onSelect(restaurantIndex, slideIndex,
-                `/api/images/proxy?url=${encodeURIComponent(u)}`, "URL manuelle");
+                `/api/images/proxy?url=${encodeURIComponent(u)}`, "URL manuelle",
+                `/api/images/proxy?url=${encodeURIComponent(u)}`);
               setCustomUrl("");
             }
           }}
@@ -365,7 +367,7 @@ function SlidePicker({
               {previewStage < 2 && (
                 <button
                   onClick={() => {
-                    onSelect(restaurantIndex, slideIndex, previewPhoto.src, `© ${previewPhoto.photographer}`);
+                    onSelect(restaurantIndex, slideIndex, previewPhoto.src, `© ${previewPhoto.photographer}`, previewPhoto.thumb);
                     setPreviewPhoto(null);
                   }}
                   style={{
@@ -420,13 +422,33 @@ async function composeSlide(slide: AgentSlide, canvas: HTMLCanvasElement): Promi
   // Image de fond
   if (slide.imageUrl) {
     try {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      await new Promise<void>((res, rej) => {
-        img.onload = () => res();
-        img.onerror = () => rej();
-        img.src = slide.imageUrl!;
-      });
+      // Charge l'originale ; si elle échoue (lien expiré/bloqué), bascule
+      // sur la miniature qui reste valide (cache Google) plutôt qu'un fond vide.
+      const loadImg = (url: string) =>
+        new Promise<HTMLImageElement>((res, rej) => {
+          const im = new Image();
+          im.crossOrigin = "anonymous";
+          im.onload = () => res(im);
+          im.onerror = () => rej(new Error("load failed"));
+          im.src = url;
+        });
+
+      // Passe par le proxy (CORS OK) sauf data URI / déjà proxifié
+      const proxied = (u: string) =>
+        u.startsWith("data:") || u.startsWith("/api/images/proxy")
+          ? u
+          : `/api/images/proxy?url=${encodeURIComponent(u)}`;
+
+      let img: HTMLImageElement;
+      try {
+        img = await loadImg(slide.imageUrl!);
+      } catch {
+        if (slide.imageThumb && slide.imageThumb !== slide.imageUrl) {
+          img = await loadImg(proxied(slide.imageThumb));
+        } else {
+          throw new Error("no image");
+        }
+      }
 
       const scale = Math.max(W / img.naturalWidth, H / img.naturalHeight);
       const targetW = Math.round(img.naturalWidth * scale);
@@ -645,7 +667,7 @@ export default function TikTokAgent() {
     }
   }
 
-  function selectImage(rIdx: number, sIdx: number, url: string, src: string) {
+  function selectImage(rIdx: number, sIdx: number, url: string, src: string, thumb?: string) {
     setRestaurants((prev) =>
       prev.map((r, i) =>
         i !== rIdx
@@ -653,7 +675,7 @@ export default function TikTokAgent() {
           : {
               ...r,
               slides: r.slides.map((s, j) =>
-                j !== sIdx ? s : { ...s, imageUrl: url, imageSrc: src }
+                j !== sIdx ? s : { ...s, imageUrl: url, imageSrc: src, imageThumb: thumb }
               ),
             }
       )
