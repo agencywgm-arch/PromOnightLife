@@ -18,6 +18,7 @@ type Slide = {
   titre: string;
   sousTitre: string;
   imageUrl: string;
+  imageThumb?: string; // miniature (fallback fiable si l'originale expire)
   imageSrc: string;
   imageData?: string;
 };
@@ -68,13 +69,33 @@ async function composeSlide(slide: Slide, canvas: HTMLCanvasElement): Promise<st
 
   if (slide.imageUrl) {
     try {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      await new Promise<void>((res, rej) => {
-        img.onload = () => res();
-        img.onerror = () => rej();
-        img.src = slide.imageUrl;
-      });
+      // Charge l'originale ; si elle échoue (lien expiré/bloqué), bascule
+      // sur la miniature qui reste valide (cache Google) plutôt qu'un fond vide.
+      const loadImg = (url: string) =>
+        new Promise<HTMLImageElement>((res, rej) => {
+          const im = new Image();
+          im.crossOrigin = "anonymous";
+          im.onload = () => res(im);
+          im.onerror = () => rej(new Error("load failed"));
+          im.src = url;
+        });
+
+      // Passe par le proxy (CORS OK) sauf data URI / déjà proxifié
+      const proxied = (u: string) =>
+        u.startsWith("data:") || u.startsWith("/api/images/proxy")
+          ? u
+          : `/api/images/proxy?url=${encodeURIComponent(u)}`;
+
+      let img: HTMLImageElement;
+      try {
+        img = await loadImg(slide.imageUrl);
+      } catch {
+        if (slide.imageThumb && slide.imageThumb !== slide.imageUrl) {
+          img = await loadImg(proxied(slide.imageThumb));
+        } else {
+          throw new Error("no image");
+        }
+      }
 
       const scale = Math.max(W / img.naturalWidth, H / img.naturalHeight);
       const targetW = Math.round(img.naturalWidth * scale);
@@ -291,7 +312,7 @@ export default function PhotoSearcher() {
     if (slides.some((s) => s.imageUrl === photo.src)) return;
     setSlides((prev) => [
       ...prev,
-      { titre: "", sousTitre: "", imageUrl: photo.src, imageSrc: photo.source },
+      { titre: "", sousTitre: "", imageUrl: photo.src, imageThumb: photo.thumb, imageSrc: photo.source },
     ]);
     setPreviewPhoto(null);
   }
