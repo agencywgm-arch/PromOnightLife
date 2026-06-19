@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { createContenu } from "@/lib/actions";
+import { snapshotImage } from "@/lib/imageSnapshot";
 import { card, btnPrimary, btnGhost, input, colors } from "@/lib/ui";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -592,7 +593,7 @@ async function composeSlide(slide: AgentSlide, canvas: HTMLCanvasElement): Promi
     ctx.restore();
   }
 
-  return canvas.toDataURL("image/jpeg", 0.92);
+  return canvas.toDataURL("image/jpeg", 0.95);
 }
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
@@ -668,6 +669,7 @@ export default function TikTokAgent() {
   }
 
   function selectImage(rIdx: number, sIdx: number, url: string, src: string, thumb?: string) {
+    // Sélection immédiate (UI réactive)
     setRestaurants((prev) =>
       prev.map((r, i) =>
         i !== rIdx
@@ -680,6 +682,23 @@ export default function TikTokAgent() {
             }
       )
     );
+    // Capture pleine résolution en arrière-plan, tant que le lien est frais —
+    // la photo est figée et ne pourra plus jamais expirer ni sortir vide.
+    snapshotImage(url, thumb).then((snap) => {
+      if (!snap) return;
+      setRestaurants((prev) =>
+        prev.map((r, i) =>
+          i !== rIdx
+            ? r
+            : {
+                ...r,
+                slides: r.slides.map((s, j) =>
+                  j !== sIdx ? s : { ...s, imageUrl: snap.dataUrl }
+                ),
+              }
+        )
+      );
+    });
   }
 
   async function compose(rIdx: number) {
