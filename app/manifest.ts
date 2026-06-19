@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Générateur de carrousels TikTok pour restaurants parisiens haut de gamme",
     start_url: "/contenu",
     display: "standalone",
-    background_color: "#0a0a0f",
-    theme_color: "#0a0a0f",
+    background_color: "#1a1030",
+    theme_color: "#1a1030",
     orientation: "portrait",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

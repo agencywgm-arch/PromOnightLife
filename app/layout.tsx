@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0a0f",
+  themeColor: "#1a1030", // violet sombre — évite l'écran noir au chargement à froid
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -32,7 +32,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body
         style={{
           margin: 0,
-          background: "#0a0a0f",
+          // Dégradé de marque (au lieu du noir pur) : le chargement à froid
+          // affiche une teinte violette plutôt qu'un écran noir.
+          background: "linear-gradient(180deg,#0d0a18,#160d2b)",
           color: "#e5e7eb",
           fontFamily:
             '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
