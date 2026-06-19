@@ -19,11 +19,10 @@ type PhotoResult = {
 
 const UGC_DOMAINS = ["instagram.com", "cdninstagram.com", "tiktok.com", "maps.google", "goo.gl", "tripadvisor"];
 
-// Seuils qualité — on refuse tout ce qui sortirait flou une fois monté en 9:16.
-const MIN_SHORT_SIDE = 700;   // côté court minimum (rejette miniatures/icônes/logos)
-const MIN_PIXELS = 800 * 800; // surface minimum
+// Seuils qualité — on ne veut QUE de la vraie haute définition.
+const HD_SHORT_SIDE = 1080;   // côté court mini (taille native Instagram) → net en 9:16
+const SOFT_SHORT_SIDE = 800;  // repli si trop peu de résultats HD
 const MAX_ASPECT = 2.6;       // rejette bannières/logos très allongés
-const HD_SHORT_SIDE = 1080;   // au-delà : net sans upscale notable
 
 function isUGC(link?: string, source?: string): boolean {
   const str = `${link || ""} ${source || ""}`.toLowerCase();
@@ -39,16 +38,23 @@ type SerperImage = {
   imageHeight?: number;
 };
 
-/** Garde uniquement les images assez grandes et au ratio raisonnable. */
-function isQuality(img: SerperImage): boolean {
+/** Vraie haute définition + ratio photo (pas un logo/bannière). */
+function isHD(img: SerperImage): boolean {
   const w = img.imageWidth || 0;
   const h = img.imageHeight || 0;
   if (!w || !h) return false; // dimensions inconnues → on écarte (trop risqué)
-  const short = Math.min(w, h);
-  const long = Math.max(w, h);
-  if (short < MIN_SHORT_SIDE) return false;
-  if (w * h < MIN_PIXELS) return false;
-  if (long / short > MAX_ASPECT) return false;
+  if (Math.min(w, h) < HD_SHORT_SIDE) return false;
+  if (Math.max(w, h) / Math.min(w, h) > MAX_ASPECT) return false;
+  return true;
+}
+
+/** Repli plus souple : correct mais pas forcément full HD. */
+function isAcceptable(img: SerperImage): boolean {
+  const w = img.imageWidth || 0;
+  const h = img.imageHeight || 0;
+  if (!w || !h) return false;
+  if (Math.min(w, h) < SOFT_SHORT_SIDE) return false;
+  if (Math.max(w, h) / Math.min(w, h) > MAX_ASPECT) return false;
   return true;
 }
 
@@ -107,24 +113,32 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Ne garde que les images de qualité pro, triées par résolution décroissante.
-    const quality = allImages.filter(isQuality).sort((a, b) => {
-      const pa = (a.imageWidth || 0) * (a.imageHeight || 0);
-      const pb = (b.imageWidth || 0) * (b.imageHeight || 0);
-      return pb - pa;
-    });
+    const pixels = (img: SerperImage) => (img.imageWidth || 0) * (img.imageHeight || 0);
+    // Authentiques (Instagram/Maps/TripAdvisor = vraies photos du lieu) d'abord,
+    // puis à résolution décroissante.
+    const byAuthThenRes = (a: SerperImage, b: SerperImage) => {
+      const ua = isUGC(a.link, a.source) ? 1 : 0;
+      const ub = isUGC(b.link, b.source) ? 1 : 0;
+      if (ua !== ub) return ub - ua;
+      return pixels(b) - pixels(a);
+    };
 
-    // Repli : si le filtre est trop strict et ne laisse presque rien, on
-    // complète avec les meilleures images restantes (dimensions connues) triées.
-    let pool = quality;
+    // On ne garde QUE la vraie haute définition.
+    const hd = allImages.filter(isHD).sort(byAuthThenRes);
+
+    // Repli progressif si trop peu de HD : images correctes, puis le reste.
+    let pool = hd;
+    if (pool.length < 6) {
+      const soft = allImages
+        .filter((img) => !hd.includes(img) && isAcceptable(img))
+        .sort(byAuthThenRes);
+      pool = [...hd, ...soft];
+    }
     if (pool.length < 6) {
       const rest = allImages
-        .filter((img) => !quality.includes(img) && (img.imageWidth || 0) * (img.imageHeight || 0) > 0)
-        .sort(
-          (a, b) =>
-            (b.imageWidth || 0) * (b.imageHeight || 0) - (a.imageWidth || 0) * (a.imageHeight || 0)
-        );
-      pool = [...quality, ...rest];
+        .filter((img) => !pool.includes(img) && pixels(img) > 0)
+        .sort(byAuthThenRes);
+      pool = [...pool, ...rest];
     }
 
     const photos: PhotoResult[] = pool.slice(0, 40).map((img, i) => {
