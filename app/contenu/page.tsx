@@ -21,7 +21,14 @@ const VAPID_PUBLIC_KEY =
 export default async function ContenuPage() {
   await requireAuth();
 
-  const contenus = await prisma.contenu.findMany({ orderBy: { createdAt: "desc" } });
+  // Résilience : une panne/lenteur DB ne doit jamais produire un écran noir.
+  // On rend l'outil avec une bibliothèque vide plutôt que de planter le rendu.
+  let contenus: Awaited<ReturnType<typeof prisma.contenu.findMany>> = [];
+  try {
+    contenus = await prisma.contenu.findMany({ orderBy: { createdAt: "desc" } });
+  } catch (e) {
+    console.error("[contenu] lecture bibliothèque impossible :", e);
+  }
   const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
   const pushConfigured = !!process.env.VAPID_PRIVATE_KEY;
 

@@ -42,7 +42,7 @@ export default function Loader3D({
         minHeight: fullscreen ? "100dvh" : compact ? 90 : 200,
         width: "100%",
         background: fullscreen
-          ? "radial-gradient(ellipse 70% 50% at 50% 38%, rgba(139,92,246,0.22), rgba(10,10,15,0.92) 70%)"
+          ? "radial-gradient(ellipse 80% 55% at 50% 38%, rgba(139,92,246,0.40), rgba(26,16,48,0.96) 70%), linear-gradient(160deg,#1a1030,#0d0a18)"
           : "transparent",
         backdropFilter: fullscreen ? "blur(8px)" : undefined,
         WebkitBackdropFilter: fullscreen ? "blur(8px)" : undefined,
