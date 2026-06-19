@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { card, btnPrimary, btnGhost, input, colors } from "@/lib/ui";
 import { createContenu } from "@/lib/actions";
+import { snapshotImage } from "@/lib/imageSnapshot";
 import { useRouter } from "next/navigation";
 
 type Photo = {
@@ -219,7 +220,7 @@ async function composeSlide(slide: Slide, canvas: HTMLCanvasElement): Promise<st
     ctx.restore();
   }
 
-  return canvas.toDataURL("image/jpeg", 0.92);
+  return canvas.toDataURL("image/jpeg", 0.95);
 }
 
 /* ── Composant principal ─────────────────────────────────────── */
@@ -315,6 +316,14 @@ export default function PhotoSearcher() {
       { titre: "", sousTitre: "", imageUrl: photo.src, imageThumb: photo.thumb, imageSrc: photo.source },
     ]);
     setPreviewPhoto(null);
+    // Capture pleine résolution en arrière-plan, tant que le lien est frais —
+    // la photo est figée et ne pourra plus jamais expirer ni sortir vide.
+    snapshotImage(photo.src, photo.thumb).then((snap) => {
+      if (!snap) return;
+      setSlides((prev) =>
+        prev.map((s) => (s.imageUrl === photo.src ? { ...s, imageUrl: snap.dataUrl } : s))
+      );
+    });
   }
 
   function removeSlide(idx: number) {
