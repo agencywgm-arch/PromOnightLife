@@ -589,7 +589,7 @@ export default function PhotoSearcher() {
                 src={previewStage === 0 ? previewPhoto.src : previewPhoto.thumb}
                 alt="Preview"
                 onError={() => setPreviewStage((s) => (s === 0 ? 1 : 2) as 0 | 1 | 2)}
-                style={{ maxWidth: "100%", maxHeight: "65vh", objectFit: "contain", borderRadius: 8 }}
+                style={{ width: "100%", height: "auto", maxHeight: "85vh", objectFit: "cover", borderRadius: 12, zoom: 1.1 }}
               />
             ) : (
               <div
