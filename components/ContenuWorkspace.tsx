@@ -7,8 +7,8 @@ import { colors } from "@/lib/ui";
 type TabKey = "generer" | "photos" | "biblio" | "alertes";
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
-  { key: "generer", label: "Générer", icon: "🪄" },
-  { key: "photos", label: "Photos", icon: "🔍" },
+  { key: "generer", label: "Agent IA", icon: "🪄" },
+  { key: "photos", label: "Manuel", icon: "🎨" },
   { key: "biblio", label: "Biblio", icon: "🗂️" },
   { key: "alertes", label: "Alertes", icon: "🔔" },
 ];
