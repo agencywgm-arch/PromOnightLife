@@ -126,8 +126,11 @@ function SlidePicker({
           // Pexels/ambiance, on veut exclusivement les vraies photos Google.
           // Nom exact entre guillemets → Google ne renvoie que des photos de CE
           // restaurant précis (pas de stock générique ni d'autres lieux).
+          // On envoie le nom propre du restaurant : la route /serper se charge
+          // d'ajouter le contexte (« restaurant paris », variantes Instagram…)
+          // et de relâcher la recherche si le nom exact ne donne rien.
           const serperRes = await fetch(
-            `/api/images/serper?q=${encodeURIComponent(`"${restaurantNom}" restaurant ${restaurantAdresse}`)}`
+            `/api/images/serper?q=${encodeURIComponent(restaurantNom)}`
           );
           const serperData = await serperRes.json();
           const serperPicked = serperRes.ok

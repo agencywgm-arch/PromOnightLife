@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
         keys: { p256dh: sub.p256dh, auth: sub.auth },
       },
       JSON.stringify({
-        title: "🌙 NIGHTLIFE PARIS",
+        title: "🗼 NIGHTLIFE PARIS",
         body: "Parfait ! Tu recevras chaque jour 3 carrousels prêts à publier.",
         url: "/contenu",
         tag: "test",

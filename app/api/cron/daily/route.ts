@@ -142,7 +142,7 @@ export async function GET(req: NextRequest) {
   if (ensureWebPush()) {
     const names = todays.map((c) => c.restaurant).slice(0, 3).join(" · ");
     const payload = JSON.stringify({
-      title: "🌙 3 carrousels prêts pour aujourd'hui",
+      title: "🗼 3 carrousels prêts pour aujourd'hui",
       body: names || "Tes carrousels du jour t'attendent dans la bibliothèque.",
       url: "/contenu",
       tag: "daily",
