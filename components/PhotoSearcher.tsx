@@ -69,7 +69,11 @@ async function composeSlide(slide: Slide, canvas: HTMLCanvasElement): Promise<st
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
 
-  ctx.fillStyle = "#0a0a0f";
+  // Fond dégradé de marque (net, sans flou)
+  const baseBg = ctx.createLinearGradient(0, 0, 0, H);
+  baseBg.addColorStop(0, "#160d2b");
+  baseBg.addColorStop(1, "#0b0815");
+  ctx.fillStyle = baseBg;
   ctx.fillRect(0, 0, W, H);
 
   if (slide.imageUrl) {
@@ -107,41 +111,21 @@ async function composeSlide(slide: Slide, canvas: HTMLCanvasElement): Promise<st
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
 
-      // 1) Fond flou plein cadre : masque les agrandissements et évite tout bord
-      //    vide. Astuce universelle (compatible iOS) : on réduit l'image très
-      //    petit puis on l'étire — le lissage du navigateur crée un flou propre.
-      const bg = document.createElement("canvas");
-      bg.width = 80;
-      bg.height = Math.round((80 * H) / W);
-      const bgCtx = bg.getContext("2d")!;
-      const bgScale = Math.max(bg.width / iw, bg.height / ih);
-      bgCtx.drawImage(
-        img,
-        (bg.width - iw * bgScale) / 2,
-        (bg.height - ih * bgScale) / 2,
-        iw * bgScale,
-        ih * bgScale
-      );
-      ctx.drawImage(bg, 0, 0, W, H);
-      ctx.fillStyle = "rgba(8,8,14,0.45)"; // voile sombre (contraste + uniformité)
-      ctx.fillRect(0, 0, W, H);
+      // Photo NETTE, plein largeur, en haut. Cadre proche du carré (recadrage
+      // doux, PAS de sur-zoom 9:16) et AUCUN flou.
+      const PHOTO_H = Math.round(H * 0.62);
+      const cover = Math.max(W / iw, PHOTO_H / ih);
+      const dw = Math.round(iw * cover);
+      const dh = Math.round(ih * cover);
 
-      // 2) Photo NETTE en "contain" : toute la photo visible, zoom minimal.
-      //    Calée vers le haut pour dégager la zone de texte en bas.
-      const fit = Math.min(W / iw, H / ih);
-      const targetW = Math.round(iw * fit);
-      const targetH = Math.round(ih * fit);
-
-      // Agrandissement progressif par paliers de 2x seulement si l'on doit
-      // dépasser la résolution native (bien plus net qu'un seul saut).
       let source: HTMLImageElement | HTMLCanvasElement = img;
-      if (fit > 1.5) {
+      if (cover > 1.3) {
         let curW = iw;
         let curH = ih;
         let cur: HTMLImageElement | HTMLCanvasElement = img;
-        while (curW * 2 < targetW || curH * 2 < targetH) {
-          const nextW = Math.min(curW * 2, targetW);
-          const nextH = Math.min(curH * 2, targetH);
+        while (curW * 2 < dw || curH * 2 < dh) {
+          const nextW = Math.min(curW * 2, dw);
+          const nextH = Math.min(curH * 2, dh);
           const off = document.createElement("canvas");
           off.width = nextW;
           off.height = nextH;
@@ -156,23 +140,35 @@ async function composeSlide(slide: Slide, canvas: HTMLCanvasElement): Promise<st
         source = cur;
       }
 
-      const dx = Math.round((W - targetW) / 2);
-      const dy = Math.min(Math.round((H - targetH) / 2), Math.round(H * 0.04));
-      ctx.drawImage(source, dx, dy, targetW, targetH);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, W, PHOTO_H);
+      ctx.clip();
+      ctx.drawImage(
+        source,
+        Math.round((W - dw) / 2),
+        Math.round((PHOTO_H - dh) / 2),
+        dw,
+        dh
+      );
+      ctx.restore();
+
+      const blend = ctx.createLinearGradient(0, PHOTO_H - 180, 0, PHOTO_H + 30);
+      blend.addColorStop(0, "rgba(11,8,21,0)");
+      blend.addColorStop(1, "#0b0815");
+      ctx.fillStyle = blend;
+      ctx.fillRect(0, PHOTO_H - 180, W, 220);
     } catch {
-      const g = ctx.createLinearGradient(0, 0, W, H);
-      g.addColorStop(0, "#1a0a2e");
-      g.addColorStop(1, "#0d0d1a");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W, H);
+      // Image non chargeable — on garde le fond de marque déjà dessiné
     }
   }
 
-  const grad = ctx.createLinearGradient(0, H * 0.5, 0, H);
-  grad.addColorStop(0, "rgba(0,0,0,0)");
-  grad.addColorStop(1, "rgba(0,0,0,0.88)");
+  // Léger renfort de lisibilité tout en bas (la photo est en haut)
+  const grad = ctx.createLinearGradient(0, H * 0.78, 0, H);
+  grad.addColorStop(0, "rgba(11,8,21,0)");
+  grad.addColorStop(1, "rgba(11,8,21,0.85)");
   ctx.fillStyle = grad;
-  ctx.fillRect(0, H * 0.5, W, H * 0.5);
+  ctx.fillRect(0, H * 0.78, W, H * 0.22);
 
   // Zone sûre TikTok/Reels (hors UI : back/search en haut, like/share à
   // droite, légende/musique en bas) : 720x1000px, ancrée à gauche=160, bas=1350.
@@ -271,8 +267,39 @@ export default function PhotoSearcher() {
   const [hashtags, setHashtags] = useState("");
   const [composing, setComposing] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [genAI, setGenAI] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const router = useRouter();
+
+  // Génère une image IA HD (filet de sécurité quand aucune vraie photo nette).
+  async function generateAIImage() {
+    if (!query.trim()) return;
+    setGenAI(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/images/generate?q=${encodeURIComponent(query)}&kind=ambiance`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const p = data.photo;
+      setPhotos((prev) => [
+        {
+          id: Date.now(),
+          src: p.src,
+          thumb: p.thumb,
+          source: "Image IA",
+          isUGC: false,
+          hd: true,
+          width: p.width,
+          height: p.height,
+        },
+        ...prev,
+      ]);
+    } catch (e) {
+      setError(`IA indisponible : ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setGenAI(false);
+    }
+  }
 
   async function handleSearch() {
     if (!query.trim()) return;
@@ -438,13 +465,30 @@ export default function PhotoSearcher() {
         >
           {loading ? "🔄 Cherche..." : "Chercher"}
         </button>
+        <button
+          onClick={generateAIImage}
+          disabled={!query.trim() || genAI}
+          title="Génère une image d'ambiance HD par IA (si aucune vraie photo nette)"
+          style={{
+            ...btnGhost,
+            fontSize: 12,
+            padding: "8px 14px",
+            whiteSpace: "nowrap",
+            borderColor: `${colors.violet}88`,
+            color: colors.violet,
+          }}
+        >
+          {genAI ? "✨ Génère..." : "✨ Image IA"}
+        </button>
       </div>
 
       {error && (
         <p style={{ fontSize: 12, color: colors.rouge, margin: "8px 0" }}>⚠️ {error}</p>
       )}
 
-      {loading && <Loader3D compact label="Recherche des photos HD" />}
+      {(loading || genAI) && (
+        <Loader3D compact label={genAI ? "L'IA peint ton image HD" : "Recherche des photos HD"} />
+      )}
 
       {/* Grille de résultats */}
       {photos.length > 0 && (
