@@ -558,12 +558,33 @@ async function composeSlide(slide: AgentSlide, canvas: HTMLCanvasElement): Promi
       );
       ctx.restore();
 
-      // Fondu net (dégradé, pas de flou) entre la photo et le fond sombre
-      const blend = ctx.createLinearGradient(0, PHOTO_H - 180, 0, PHOTO_H + 30);
+      // Fondu FLOU (pas un aplat noir) entre la photo et le fond sombre :
+      // on reprend la bande basse déjà dessinée, on la réduit puis on
+      // l'agrandit (flou par sous-échantillonnage), avant de la fondre
+      // dans le fond via un dégradé d'opacité.
+      const STRIP_H = 260;
+      const stripY = PHOTO_H - STRIP_H;
+      const tiny = document.createElement("canvas");
+      const blurScale = 0.06;
+      tiny.width = Math.max(1, Math.round(W * blurScale));
+      tiny.height = Math.max(1, Math.round(STRIP_H * blurScale));
+      const tinyCtx = tiny.getContext("2d")!;
+      tinyCtx.drawImage(canvas, 0, stripY, W, STRIP_H, 0, 0, tiny.width, tiny.height);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, stripY, W, STRIP_H);
+      ctx.clip();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "low";
+      ctx.drawImage(tiny, 0, stripY, W, STRIP_H);
+      ctx.restore();
+
+      const blend = ctx.createLinearGradient(0, stripY, 0, PHOTO_H + 30);
       blend.addColorStop(0, "rgba(11,8,21,0)");
       blend.addColorStop(1, "#0b0815");
       ctx.fillStyle = blend;
-      ctx.fillRect(0, PHOTO_H - 180, W, 220);
+      ctx.fillRect(0, stripY, W, STRIP_H + 30);
     } catch {
       // Image non chargeable — fond gradient
       const g = ctx.createLinearGradient(0, 0, W, H);
