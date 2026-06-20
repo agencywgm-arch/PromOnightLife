@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
+// Les images IA (Pollinations) peuvent mettre 10-15s à se générer : on laisse
+// le temps au proxy de les récupérer sans expirer.
+export const maxDuration = 60;
 
 const MAX_SIZE = 15 * 1024 * 1024; // 15 Mo
 

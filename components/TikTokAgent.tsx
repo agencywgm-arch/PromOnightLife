@@ -107,8 +107,28 @@ function SlidePicker({
   const [provider, setProvider] = useState<string | null>(null);
   const [error, setError] = useState<ReactNode | null>(null);
   const [customUrl, setCustomUrl] = useState("");
+  const [genAI, setGenAI] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<PexelsPhoto | null>(null);
   const [previewStage, setPreviewStage] = useState<0 | 1 | 2>(0);
+
+  // Génère une image IA HD et la sélectionne (filet qualité si pas de vraie photo).
+  async function genAIImage() {
+    setGenAI(true);
+    try {
+      const kind = slideIndex === 2 ? "plat" : slideIndex === 1 ? "facade" : "ambiance";
+      const res = await fetch(
+        `/api/images/generate?q=${encodeURIComponent(restaurantNom)}&kind=${kind}`
+      );
+      const data = await res.json();
+      if (data.photo) {
+        onSelect(restaurantIndex, slideIndex, data.photo.src, "Image IA", data.photo.thumb);
+      }
+    } catch {
+      /* silencieux */
+    } finally {
+      setGenAI(false);
+    }
+  }
 
   useEffect(() => {
     setPreviewStage(0);
@@ -314,6 +334,21 @@ function SlidePicker({
         >
           Utiliser
         </button>
+        <button
+          onClick={genAIImage}
+          disabled={genAI}
+          title="Génère une image d'ambiance HD par IA pour cette slide"
+          style={{
+            ...btnGhost,
+            fontSize: "10px",
+            padding: "6px 8px",
+            whiteSpace: "nowrap",
+            borderColor: `${colors.violet}88`,
+            color: colors.violet,
+          }}
+        >
+          {genAI ? "✨ Génère…" : "✨ Image IA"}
+        </button>
       </div>
 
       {isSelected && slide.imageSrc && (
@@ -435,8 +470,11 @@ async function composeSlide(slide: AgentSlide, canvas: HTMLCanvasElement): Promi
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
 
-  // Fond noir
-  ctx.fillStyle = "#0a0a0f";
+  // Fond dégradé de marque (net, sans flou)
+  const baseBg = ctx.createLinearGradient(0, 0, 0, H);
+  baseBg.addColorStop(0, "#160d2b");
+  baseBg.addColorStop(1, "#0b0815");
+  ctx.fillStyle = baseBg;
   ctx.fillRect(0, 0, W, H);
 
   // Image de fond
@@ -475,41 +513,24 @@ async function composeSlide(slide: AgentSlide, canvas: HTMLCanvasElement): Promi
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
 
-      // 1) Fond flou plein cadre : masque les agrandissements et évite tout bord
-      //    vide. Astuce universelle (compatible iOS) : on réduit l'image très
-      //    petit puis on l'étire — le lissage du navigateur crée un flou propre.
-      const bg = document.createElement("canvas");
-      bg.width = 80;
-      bg.height = Math.round((80 * H) / W);
-      const bgCtx = bg.getContext("2d")!;
-      const bgScale = Math.max(bg.width / iw, bg.height / ih);
-      bgCtx.drawImage(
-        img,
-        (bg.width - iw * bgScale) / 2,
-        (bg.height - ih * bgScale) / 2,
-        iw * bgScale,
-        ih * bgScale
-      );
-      ctx.drawImage(bg, 0, 0, W, H);
-      ctx.fillStyle = "rgba(8,8,14,0.45)"; // voile sombre (contraste + uniformité)
-      ctx.fillRect(0, 0, W, H);
+      // Photo NETTE, plein largeur, en haut. Cadre proche du carré (recadrage
+      // doux, PAS de sur-zoom 9:16) et AUCUN flou. La photo descend juste
+      // assez pour laisser la zone de texte en bas.
+      const PHOTO_H = Math.round(H * 0.62); // ~1190px
+      const cover = Math.max(W / iw, PHOTO_H / ih);
+      const dw = Math.round(iw * cover);
+      const dh = Math.round(ih * cover);
 
-      // 2) Photo NETTE en "contain" : toute la photo visible, zoom minimal.
-      //    Calée vers le haut pour dégager la zone de texte en bas.
-      const fit = Math.min(W / iw, H / ih);
-      const targetW = Math.round(iw * fit);
-      const targetH = Math.round(ih * fit);
-
-      // Agrandissement progressif par paliers de 2x seulement si l'on doit
-      // dépasser la résolution native (bien plus net qu'un seul saut).
+      // Agrandissement progressif par paliers de 2x uniquement si l'on dépasse
+      // la résolution native (bien plus net qu'un seul saut).
       let source: HTMLImageElement | HTMLCanvasElement = img;
-      if (fit > 1.5) {
+      if (cover > 1.3) {
         let curW = iw;
         let curH = ih;
         let cur: HTMLImageElement | HTMLCanvasElement = img;
-        while (curW * 2 < targetW || curH * 2 < targetH) {
-          const nextW = Math.min(curW * 2, targetW);
-          const nextH = Math.min(curH * 2, targetH);
+        while (curW * 2 < dw || curH * 2 < dh) {
+          const nextW = Math.min(curW * 2, dw);
+          const nextH = Math.min(curH * 2, dh);
           const off = document.createElement("canvas");
           off.width = nextW;
           off.height = nextH;
@@ -524,9 +545,25 @@ async function composeSlide(slide: AgentSlide, canvas: HTMLCanvasElement): Promi
         source = cur;
       }
 
-      const dx = Math.round((W - targetW) / 2);
-      const dy = Math.min(Math.round((H - targetH) / 2), Math.round(H * 0.04));
-      ctx.drawImage(source, dx, dy, targetW, targetH);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, W, PHOTO_H);
+      ctx.clip();
+      ctx.drawImage(
+        source,
+        Math.round((W - dw) / 2),
+        Math.round((PHOTO_H - dh) / 2),
+        dw,
+        dh
+      );
+      ctx.restore();
+
+      // Fondu net (dégradé, pas de flou) entre la photo et le fond sombre
+      const blend = ctx.createLinearGradient(0, PHOTO_H - 180, 0, PHOTO_H + 30);
+      blend.addColorStop(0, "rgba(11,8,21,0)");
+      blend.addColorStop(1, "#0b0815");
+      ctx.fillStyle = blend;
+      ctx.fillRect(0, PHOTO_H - 180, W, 220);
     } catch {
       // Image non chargeable — fond gradient
       const g = ctx.createLinearGradient(0, 0, W, H);
@@ -537,12 +574,12 @@ async function composeSlide(slide: AgentSlide, canvas: HTMLCanvasElement): Promi
     }
   }
 
-  // Dégradé bas pour lisibilité
-  const grad = ctx.createLinearGradient(0, H * 0.5, 0, H);
-  grad.addColorStop(0, "rgba(0,0,0,0)");
-  grad.addColorStop(1, "rgba(0,0,0,0.88)");
+  // Léger renfort de lisibilité tout en bas (la photo est en haut)
+  const grad = ctx.createLinearGradient(0, H * 0.78, 0, H);
+  grad.addColorStop(0, "rgba(11,8,21,0)");
+  grad.addColorStop(1, "rgba(11,8,21,0.85)");
   ctx.fillStyle = grad;
-  ctx.fillRect(0, H * 0.5, W, H * 0.5);
+  ctx.fillRect(0, H * 0.78, W, H * 0.22);
 
   // ── Bulles texte cantonnées à la zone sûre TikTok/Reels ───────
   // Zone sûre (hors UI : back/search en haut, like/share à droite,

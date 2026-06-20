@@ -138,28 +138,29 @@ export async function GET(req: NextRequest) {
 
     const pixels = (img: SerperImage) => (img.imageWidth || 0) * (img.imageHeight || 0);
 
-    // Authentiques (Instagram/Maps/TripAdvisor = vraies photos du lieu) d'abord,
-    // puis à résolution décroissante.
-    const byAuthThenRes = (a: SerperImage, b: SerperImage) => {
-      const ua = isUGC(a.link, a.source) ? 2 : 0; // poids fort sur l'authentique
-      const ub = isUGC(b.link, b.source) ? 2 : 0;
-      if (ua !== ub) return ub - ua;
-      return pixels(b) - pixels(a); // sinon, la plus haute résolution d'abord
+    // Tri QUALITÉ D'ABORD : on veut les photos les plus nettes en tête.
+    // Résolution décroissante, puis authenticité (UGC) comme départage.
+    const byResThenAuth = (a: SerperImage, b: SerperImage) => {
+      const pa = pixels(a);
+      const pb = pixels(b);
+      if (pb !== pa) return pb - pa; // la plus haute résolution d'abord
+      const ua = isUGC(a.link, a.source) ? 1 : 0;
+      const ub = isUGC(b.link, b.source) ? 1 : 0;
+      return ub - ua;
     };
 
-    // Tiers de qualité : HD d'abord, puis correct, puis le reste. On affiche
-    // toujours quelque chose (jamais zéro), mais le HD remonte systématiquement
-    // en tête et porte le badge HD côté UI.
-    const hd = allImages.filter(isHD).sort(byAuthThenRes);
-    const soft = allImages
-      .filter((img) => !hd.includes(img) && isAcceptable(img))
-      .sort(byAuthThenRes);
-    const rest = allImages
-      .filter((img) => !hd.includes(img) && !soft.includes(img))
-      .sort(byAuthThenRes);
-
-    // Mode qualité : si on a déjà assez de HD, on ne dilue pas avec le reste.
-    const pool = hd.length >= 8 ? hd : [...hd, ...soft, ...rest];
+    // TRI ANTI-MOCHE : on ne garde QUE la vraie HD (≥1080px côté court).
+    // Les images sans dimensions connues ou en deçà sont écartées (les
+    // « conneries 480p »). On ne descend en « correct » (≥800) QUE s'il n'y a
+    // pas assez de HD, pour ne jamais renvoyer zéro — et jamais en dessous.
+    const hd = allImages.filter(isHD).sort(byResThenAuth);
+    let pool = hd;
+    if (hd.length < 4) {
+      const soft = allImages
+        .filter((img) => !hd.includes(img) && isAcceptable(img))
+        .sort(byResThenAuth);
+      pool = [...hd, ...soft];
+    }
 
     const photos: PhotoResult[] = pool.slice(0, 40).map((img, i) => {
       const short = Math.min(img.imageWidth || 0, img.imageHeight || 0);
