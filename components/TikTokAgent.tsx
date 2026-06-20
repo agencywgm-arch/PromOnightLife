@@ -39,6 +39,7 @@ type PexelsPhoto = {
   src: string;
   thumb: string;
   hd?: boolean;
+  isUGC?: boolean;
   width?: number;
   height?: number;
 };
@@ -82,7 +83,7 @@ function pickFresh<T extends { src: string }>(list: T[], n: number): T[] {
   return picked;
 }
 
-const PHOTOS_PAR_SLIDE = 8;
+const PHOTOS_PAR_SLIDE = 12;
 
 /* ─── Composant image picker pour 1 slide ─────────────────────── */
 
@@ -107,6 +108,7 @@ function SlidePicker({
   const [provider, setProvider] = useState<string | null>(null);
   const [error, setError] = useState<ReactNode | null>(null);
   const [customUrl, setCustomUrl] = useState("");
+  const [customQuery, setCustomQuery] = useState("");
   const [genAI, setGenAI] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<PexelsPhoto | null>(null);
   const [previewStage, setPreviewStage] = useState<0 | 1 | 2>(0);
@@ -136,62 +138,64 @@ function SlidePicker({
 
   const googleImagesUrl = `https://www.google.com/search?q=${encodeURIComponent(`"${restaurantNom}" restaurant Paris`)}&tbm=isch&hl=fr`;
 
-  // Auto-search: déclenche les recherches à montage du composant
+  // Recherche Google Images (Serper.dev) — réutilisée par l'auto-recherche
+  // au montage ET par la recherche manuelle (bouton "Chercher" / relancer).
+  async function runSearch(q: string) {
+    setLoading(true);
+    setError(null);
+    try {
+      const serperRes = await fetch(`/api/images/serper?q=${encodeURIComponent(q)}`);
+      const serperData = await serperRes.json();
+      const serperPicked = serperRes.ok
+        ? pickFresh<{ src: string; thumb: string; source: string; pageUrl?: string; hd?: boolean; isUGC?: boolean; width?: number; height?: number }>(
+            serperData.photos || [], PHOTOS_PAR_SLIDE)
+        : [];
+      if (serperPicked.length > 0) {
+        setPhotos(
+          serperPicked.map((p, i) => ({
+            id: i,
+            pageUrl: p.pageUrl || "",
+            photographer: p.source,
+            src: p.src,
+            thumb: p.thumb,
+            hd: p.hd,
+            isUGC: p.isUGC,
+            width: p.width,
+            height: p.height,
+          }))
+        );
+        setProvider("serper");
+        return;
+      }
+
+      // Aucun résultat Google → on explique pourquoi, sans photos de remplacement
+      if (serperData.noProvider) {
+        setError("Clé Serper absente : ajoute SERPER_API_KEY dans Vercel → Settings → Environment Variables, puis Redeploy. Vérifie sur /api/images/test.");
+      } else if (serperData.error) {
+        setError(`Recherche Google indisponible : ${serperData.error}`);
+      } else {
+        setError("Aucun résultat Google Images pour cette recherche.");
+      }
+    } finally {
+      setSearched(true);
+      setLoading(false);
+    }
+  }
+
+  // Auto-search: déclenche la recherche au nom exact du restaurant, au montage.
   useEffect(() => {
     if (!searched && slide.searchQuery) {
-      const autoSearch = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-          // Source UNIQUE : Google Images via Serper.dev — pas de fallback
-          // Pexels/ambiance, on veut exclusivement les vraies photos Google.
-          // Nom exact entre guillemets → Google ne renvoie que des photos de CE
-          // restaurant précis (pas de stock générique ni d'autres lieux).
-          // On envoie le nom propre du restaurant : la route /serper se charge
-          // d'ajouter le contexte (« restaurant paris », variantes Instagram…)
-          // et de relâcher la recherche si le nom exact ne donne rien.
-          const serperRes = await fetch(
-            `/api/images/serper?q=${encodeURIComponent(restaurantNom)}`
-          );
-          const serperData = await serperRes.json();
-          const serperPicked = serperRes.ok
-            ? pickFresh<{ src: string; thumb: string; source: string; pageUrl?: string; hd?: boolean; width?: number; height?: number }>(
-                serperData.photos || [], PHOTOS_PAR_SLIDE)
-            : [];
-          if (serperPicked.length > 0) {
-            setPhotos(
-              serperPicked.map((p, i) => ({
-                id: i,
-                pageUrl: p.pageUrl || "",
-                photographer: p.source,
-                src: p.src,
-                thumb: p.thumb,
-                hd: p.hd,
-                width: p.width,
-                height: p.height,
-              }))
-            );
-            setProvider("serper");
-            setSearched(true);
-            return;
-          }
-
-          // Aucun résultat Google → on explique pourquoi, sans photos de remplacement
-          if (serperData.noProvider) {
-            setError("Clé Serper absente : ajoute SERPER_API_KEY dans Vercel → Settings → Environment Variables, puis Redeploy. Vérifie sur /api/images/test.");
-          } else if (serperData.error) {
-            setError(`Recherche Google indisponible : ${serperData.error}`);
-          } else {
-            setError("Aucun résultat Google Images pour ce restaurant.");
-          }
-        } finally {
-          setSearched(true);
-          setLoading(false);
-        }
-      };
-      autoSearch();
+      runSearch(restaurantNom);
     }
   }, [slide.searchQuery, restaurantNom, restaurantAdresse]);
+
+  // Relance la recherche avec un mot-clé personnalisé (ex: "vue tour eiffel",
+  // "façade le soir"…) si le nom exact ne donne pas une photo satisfaisante.
+  function searchCustom() {
+    const q = customQuery.trim();
+    if (!q || loading) return;
+    runSearch(`${restaurantNom} ${q}`);
+  }
 
   const isSelected = !!slide.imageUrl;
 
@@ -221,7 +225,7 @@ function SlidePicker({
         )}
       </div>
 
-      {!searched && (
+      {(!searched || loading) && (
         <Loader3D compact label="Recherche des photos HD" />
       )}
 
@@ -253,43 +257,66 @@ function SlidePicker({
               </span>
             )}
           </div>
+          <p style={{ fontSize: 10, color: colors.muted, margin: "0 0 4px" }}>
+            {photos.length} résultats — clique sur une photo pour la prévisualiser et la choisir
+          </p>
           {/* Bande défilante horizontale — flick rapide, compact, responsive */}
           <div
             style={{
               display: "flex",
-              gap: 5,
+              gap: 6,
               marginTop: 6,
               overflowX: "auto",
               paddingBottom: 4,
-              scrollSnapType: "x proximity",
+              scrollSnapType: "x mandatory",
               WebkitOverflowScrolling: "touch",
             }}
           >
-            {photos.map((p) => (
-              <div key={p.id} style={{ position: "relative", flexShrink: 0, scrollSnapAlign: "start" }}>
-                <img src={p.thumb} alt="" title={p.width ? `${p.width}×${p.height}` : p.photographer}
-                  onClick={() => setPreviewPhoto(p)}
-                  onError={() => setPhotos((prev) => prev.filter((x) => x.id !== p.id))}
-                  style={{
-                    width: "50px",
-                    height: "75px",
-                    objectFit: "cover",
-                    borderRadius: 5,
-                    cursor: "pointer",
-                    display: "block",
-                    border: slide.imageUrl === p.src ? `2px solid ${colors.violet}` : "2px solid transparent",
-                    boxShadow: previewPhoto?.id === p.id ? `0 0 8px ${colors.violet}` : "none",
-                  }} />
-                {p.hd && (
-                  <span style={{
-                    position: "absolute", top: 3, left: 3,
-                    background: "rgba(74,222,128,0.92)", color: "#04210f",
-                    fontSize: 7, fontWeight: 800, borderRadius: 3, padding: "1px 3px",
-                    letterSpacing: 0.3,
-                  }}>HD</span>
-                )}
-              </div>
-            ))}
+            {photos.map((p) => {
+              const isSelectedPhoto = slide.imageUrl === p.src;
+              const short = p.width ? Math.min(p.width, p.height || 0) : 0;
+              return (
+                <div key={p.id} style={{ position: "relative", flexShrink: 0, scrollSnapAlign: "start" }}>
+                  <img src={p.thumb} alt="" title={p.width ? `${p.width}×${p.height}` : p.photographer}
+                    onClick={() => setPreviewPhoto(p)}
+                    onError={() => setPhotos((prev) => prev.filter((x) => x.id !== p.id))}
+                    style={{
+                      width: "70px",
+                      height: "105px",
+                      objectFit: "cover",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      display: "block",
+                      border: isSelectedPhoto ? `3px solid ${colors.violet}` : `1px solid ${colors.border}`,
+                      boxShadow: previewPhoto?.id === p.id ? `0 0 8px ${colors.violet}` : "none",
+                      opacity: isSelectedPhoto ? 1 : 0.85,
+                    }} />
+                  {p.isUGC && !isSelectedPhoto && (
+                    <span style={{
+                      position: "absolute", top: 4, left: 4,
+                      background: "linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)",
+                      borderRadius: 4, fontSize: 8, fontWeight: 700, color: "#fff", padding: "2px 4px",
+                    }}>IG</span>
+                  )}
+                  {p.hd && !isSelectedPhoto && (
+                    <span style={{
+                      position: "absolute", bottom: 4, left: 4,
+                      background: "rgba(74,222,128,0.92)", color: "#04210f",
+                      fontSize: 8, fontWeight: 800, borderRadius: 3, padding: "1px 4px",
+                      letterSpacing: 0.3,
+                    }}>HD{short ? ` · ${short}px` : ""}</span>
+                  )}
+                  {isSelectedPhoto && (
+                    <span style={{
+                      position: "absolute", top: 4, right: 4,
+                      background: colors.violet, width: 18, height: 18, borderRadius: "50%",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      color: "#000", fontWeight: 700, fontSize: 11,
+                    }}>✓</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </>
       )}
@@ -311,8 +338,28 @@ function SlidePicker({
         </div>
       )}
 
-      {/* URL manuelle — toujours disponible */}
+      {/* Recherche personnalisée — relance Google Images avec un mot-clé en plus
+          du nom du restaurant (ex: "vue", "façade", "terrasse") si le nom seul
+          ne donne pas une photo satisfaisante. */}
       <div style={{ display: "flex", gap: 4, marginTop: 8, flexWrap: "wrap" }}>
+        <input
+          value={customQuery}
+          onChange={(e) => setCustomQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && searchCustom()}
+          placeholder="Affiner la recherche (ex: terrasse, façade, vue)"
+          style={{ ...input, fontSize: "10px", padding: "6px 8px", flex: 1, minWidth: "80px" }}
+        />
+        <button
+          onClick={searchCustom}
+          disabled={!customQuery.trim() || loading}
+          style={{ ...btnGhost, fontSize: "10px", padding: "6px 8px", whiteSpace: "nowrap" }}
+        >
+          🔍 Chercher
+        </button>
+      </div>
+
+      {/* URL manuelle — toujours disponible */}
+      <div style={{ display: "flex", gap: 4, marginTop: 6, flexWrap: "wrap" }}>
         <input
           value={customUrl}
           onChange={(e) => setCustomUrl(e.target.value)}
@@ -393,9 +440,8 @@ function SlidePicker({
                   width: "100%",
                   height: "auto",
                   maxHeight: "85vh",
-                  objectFit: "cover",
+                  objectFit: "contain",
                   borderRadius: 12,
-                  zoom: 1.1,
                 }}
               />
             ) : (
@@ -432,6 +478,16 @@ function SlidePicker({
                 >
                   ✓ Sélectionner cette image
                 </button>
+              )}
+              {previewStage < 2 && (
+                <a
+                  href={previewPhoto.src}
+                  download={`photo_${previewPhoto.id}.jpg`}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ ...btnGhost, fontSize: 12, textDecoration: "none" }}
+                >
+                  ⬇️ Télécharger
+                </a>
               )}
               {previewPhoto.pageUrl && (
                 <a
