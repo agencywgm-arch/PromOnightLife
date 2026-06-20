@@ -121,25 +121,36 @@ export async function setStaffEvenementStatut(
 
 // ---------- CONTENU ----------
 
-export async function createContenu(formData: FormData) {
-  await prisma.contenu.create({
-    data: {
-      restaurant: String(formData.get("restaurant") || "").trim(),
-      adresse: String(formData.get("adresse") || "").trim() || null,
-      arrondissement: String(formData.get("arrondissement") || "").trim() || null,
-      horaires: String(formData.get("horaires") || "").trim() || null,
-      prix: String(formData.get("prix") || "").trim() || null,
-      cuisine: String(formData.get("cuisine") || "").trim() || null,
-      scoreGlobal: parseInt(String(formData.get("scoreGlobal") || "0"), 10),
-      scoreViral: parseInt(String(formData.get("scoreViral") || "0"), 10),
-      scoreLuxe: parseInt(String(formData.get("scoreLuxe") || "0"), 10),
-      slides: String(formData.get("slides") || "[]"),
-      caption: String(formData.get("caption") || "").trim() || null,
-      hashtags: String(formData.get("hashtags") || "").trim() || null,
-      platform: String(formData.get("platform") || "TIKTOK"),
-    },
-  });
-  revalidatePath("/contenu");
+export async function createContenu(
+  formData: FormData
+): Promise<{ ok: boolean; message?: string }> {
+  // On NE laisse PAS l'erreur Prisma remonter brute : en production Next la
+  // masque derrière « An error occurred in the Server Components render »,
+  // illisible. On renvoie le vrai message pour que l'UI l'affiche.
+  try {
+    await prisma.contenu.create({
+      data: {
+        restaurant: String(formData.get("restaurant") || "").trim(),
+        adresse: String(formData.get("adresse") || "").trim() || null,
+        arrondissement: String(formData.get("arrondissement") || "").trim() || null,
+        horaires: String(formData.get("horaires") || "").trim() || null,
+        prix: String(formData.get("prix") || "").trim() || null,
+        cuisine: String(formData.get("cuisine") || "").trim() || null,
+        scoreGlobal: parseInt(String(formData.get("scoreGlobal") || "0"), 10),
+        scoreViral: parseInt(String(formData.get("scoreViral") || "0"), 10),
+        scoreLuxe: parseInt(String(formData.get("scoreLuxe") || "0"), 10),
+        slides: String(formData.get("slides") || "[]"),
+        caption: String(formData.get("caption") || "").trim() || null,
+        hashtags: String(formData.get("hashtags") || "").trim() || null,
+        platform: String(formData.get("platform") || "TIKTOK"),
+      },
+    });
+    revalidatePath("/contenu");
+    return { ok: true };
+  } catch (e) {
+    console.error("[createContenu] écriture impossible :", e);
+    return { ok: false, message: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 export async function updateContenuStatut(id: string, statut: string) {

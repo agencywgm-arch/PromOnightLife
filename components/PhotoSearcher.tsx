@@ -437,7 +437,8 @@ export default function PhotoSearcher() {
       fd.set("scoreGlobal", "75");
       fd.set("scoreViral", "70");
       fd.set("scoreLuxe", "75");
-      await createContenu(fd);
+      const result = await createContenu(fd);
+      if (!result.ok) throw new Error(result.message || "Sauvegarde impossible");
       router.refresh();
       setSlides([]);
       setCaption("");
