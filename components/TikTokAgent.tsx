@@ -885,7 +885,8 @@ export default function TikTokAgent() {
       fd.set("scoreGlobal", "80");
       fd.set("scoreViral", "85");
       fd.set("scoreLuxe", "75");
-      await createContenu(fd);
+      const result = await createContenu(fd);
+      if (!result.ok) throw new Error(result.message || "Sauvegarde impossible");
       setSaved((prev) => ({ ...prev, [rIdx]: true }));
       router.refresh();
       // Ferme le panneau si tous les restaurants sont sauvegardés
