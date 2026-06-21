@@ -613,16 +613,6 @@ async function composeSlide(slide: AgentSlide, canvas: HTMLCanvasElement): Promi
         dh
       );
       ctx.restore();
-
-      // Fondu : dégradé d'opacité entre la photo (nette) et le fond sombre.
-      const STRIP_H = 260;
-      const stripY = PHOTO_H - STRIP_H;
-
-      const blend = ctx.createLinearGradient(0, stripY, 0, PHOTO_H + 30);
-      blend.addColorStop(0, "rgba(11,8,21,0)");
-      blend.addColorStop(1, "#0b0815");
-      ctx.fillStyle = blend;
-      ctx.fillRect(0, stripY, W, STRIP_H + 30);
     } catch {
       // Image non chargeable — fond gradient
       const g = ctx.createLinearGradient(0, 0, W, H);
