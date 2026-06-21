@@ -5,7 +5,7 @@
   "description": "Dashboard SaaS de gestion d'événements nightlife parisiens",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "db:push": "prisma db push",
     "postinstall": "prisma generate"
