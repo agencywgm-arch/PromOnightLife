@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "./prisma";
 import { verifyCredentials, setSessionCookie, clearSessionCookie } from "./auth";
+import { sendDM, type Channel } from "./instagram";
 
 // ---------- AUTH ----------
 
@@ -277,6 +278,93 @@ export async function publishToInstagram(
   } catch (e) {
     return { ok: false, message: `Erreur réseau : ${e instanceof Error ? e.message : String(e)}` };
   }
+}
+
+// ---------- MESSAGES / DM INSTAGRAM ----------
+
+/** Réponse manuelle (humaine) envoyée depuis la boîte de réception. */
+export async function sendManualReply(
+  conversationId: string,
+  text: string
+): Promise<{ ok: boolean; message: string }> {
+  const body = text.trim();
+  if (!body) return { ok: false, message: "Message vide" };
+
+  const convo = await prisma.conversation.findUnique({ where: { id: conversationId } });
+  if (!convo) return { ok: false, message: "Conversation introuvable" };
+
+  const sent = await sendDM(convo.channel as Channel, convo.externalId, body);
+
+  await prisma.message.create({
+    data: {
+      conversationId,
+      direction: "OUT",
+      text: body,
+      viaAgent: false,
+      status: sent.ok ? "SENT" : "FAILED",
+    },
+  });
+  await prisma.conversation.update({
+    where: { id: conversationId },
+    data: {
+      lastMessage: body,
+      lastDirection: "OUT",
+      lastAt: new Date(),
+      unread: 0,
+      status: sent.ok ? "OPEN" : convo.status,
+    },
+  });
+  revalidatePath("/messages");
+  return sent;
+}
+
+export async function toggleConversationAuto(conversationId: string, autoReply: boolean) {
+  await prisma.conversation.update({ where: { id: conversationId }, data: { autoReply } });
+  revalidatePath("/messages");
+}
+
+export async function setConversationStatus(conversationId: string, status: string) {
+  await prisma.conversation.update({ where: { id: conversationId }, data: { status } });
+  revalidatePath("/messages");
+}
+
+export async function markConversationRead(conversationId: string) {
+  await prisma.conversation.update({ where: { id: conversationId }, data: { unread: 0 } });
+  revalidatePath("/messages");
+}
+
+export async function deleteConversation(conversationId: string) {
+  await prisma.conversation.delete({ where: { id: conversationId } });
+  revalidatePath("/messages");
+}
+
+// ---------- FAQ (base de connaissances de l'agent) ----------
+
+export async function createFaq(formData: FormData) {
+  const question = String(formData.get("question") || "").trim();
+  const answer = String(formData.get("answer") || "").trim();
+  if (!question || !answer) return;
+  const count = await prisma.faqEntry.count();
+  await prisma.faqEntry.create({ data: { question, answer, ordre: count } });
+  revalidatePath("/messages");
+}
+
+export async function updateFaq(id: string, question: string, answer: string) {
+  await prisma.faqEntry.update({
+    where: { id },
+    data: { question: question.trim(), answer: answer.trim() },
+  });
+  revalidatePath("/messages");
+}
+
+export async function toggleFaq(id: string, enabled: boolean) {
+  await prisma.faqEntry.update({ where: { id }, data: { enabled } });
+  revalidatePath("/messages");
+}
+
+export async function deleteFaq(id: string) {
+  await prisma.faqEntry.delete({ where: { id } });
+  revalidatePath("/messages");
 }
 
 // ---------- AGENTS IA ----------
