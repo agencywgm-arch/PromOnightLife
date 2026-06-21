@@ -113,3 +113,56 @@ model PushSubscription {
   createdAt DateTime @default(now())
   lastSentAt DateTime?
 }
+
+// ─── Gestion des réseaux sociaux (DM Instagram) ───────────────────────
+// Boîte de réception unifiée : une Conversation par interlocuteur (une fille
+// qui écrit en DM), quel que soit le canal (ManyChat aujourd'hui, Meta natif
+// demain). L'agent IA répond automatiquement aux questions récurrentes et
+// laisse passer en humain (NEEDS_HUMAN) ce qu'il ne sait pas traiter.
+
+model Conversation {
+  id            String    @id @default(cuid())
+  channel       String    @default("manychat") // manychat | meta | instagram
+  externalId    String    // identifiant interlocuteur côté canal (subscriber_id / IG-scoped id)
+  username      String?   // @handle Instagram si connu
+  name          String?
+  participantId String?   // lien optionnel vers une Participant
+  status        String    @default("OPEN") // OPEN | NEEDS_HUMAN | CLOSED
+  autoReply     Boolean   @default(true)   // l'agent peut répondre tout seul sur cette conv
+  unread        Int       @default(0)
+  lastMessage   String?
+  lastDirection String?   // IN | OUT
+  lastAt        DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  messages      Message[]
+
+  @@unique([channel, externalId])
+  @@index([status])
+  @@index([lastAt])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  direction      String       // IN (reçu) | OUT (envoyé)
+  text           String
+  viaAgent       Boolean      @default(false) // réponse générée automatiquement par l'agent
+  status         String       @default("SENT") // SENT | FAILED | RECEIVED
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+// Base de connaissances qui alimente l'agent : questions récurrentes et leurs
+// réponses validées (horaires, dress code, comment s'inscrire…).
+model FaqEntry {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  enabled   Boolean  @default(true)
+  ordre     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

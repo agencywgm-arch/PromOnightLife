@@ -8,6 +8,7 @@ import { colors } from "@/lib/ui";
 const links = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/participants", label: "Participantes" },
+  { href: "/messages", label: "Messages" },
   { href: "/evenements", label: "Événements" },
   { href: "/contenu", label: "Contenu" },
   { href: "/staff", label: "Staff" },
