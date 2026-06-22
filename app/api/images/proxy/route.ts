@@ -45,12 +45,21 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const headers: Record<string, string> = {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+      Referer: `${parsed.protocol}//${parsed.hostname}/`,
+    };
+
+    // Pollinations exige désormais un token (accès gratuit anonyme bloqué = 403).
+    // On l'injecte côté serveur pour qu'il ne soit jamais exposé au client.
+    const polToken = process.env.POLLINATIONS_TOKEN;
+    if (polToken && parsed.hostname.endsWith("pollinations.ai")) {
+      headers.Authorization = `Bearer ${polToken}`;
+    }
+
     const res = await fetch(parsed.toString(), {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-        Referer: `${parsed.protocol}//${parsed.hostname}/`,
-      },
+      headers,
       redirect: "follow",
     });
     if (!res.ok) {
