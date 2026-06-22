@@ -111,9 +111,9 @@ async function composeSlide(slide: Slide, canvas: HTMLCanvasElement): Promise<st
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
 
-      // Photo NETTE, plein largeur, en haut. Cadre proche du carré (recadrage
-      // doux, PAS de sur-zoom 9:16) et AUCUN flou.
-      const PHOTO_H = Math.round(H * 0.62);
+      // Photo NETTE en PLEIN CADRE 9:16 (occupe tout l'écran), sans flou.
+      // Les bulles de texte se posent par-dessus en bas (elles sont opaques).
+      const PHOTO_H = H;
       const cover = Math.max(W / iw, PHOTO_H / ih);
       const dw = Math.round(iw * cover);
       const dh = Math.round(ih * cover);
@@ -157,12 +157,12 @@ async function composeSlide(slide: Slide, canvas: HTMLCanvasElement): Promise<st
     }
   }
 
-  // Léger renfort de lisibilité tout en bas (la photo est en haut)
-  const grad = ctx.createLinearGradient(0, H * 0.78, 0, H);
+  // Très léger fondu en bas pour la lisibilité, sans masquer la photo.
+  const grad = ctx.createLinearGradient(0, H * 0.82, 0, H);
   grad.addColorStop(0, "rgba(11,8,21,0)");
-  grad.addColorStop(1, "rgba(11,8,21,0.85)");
+  grad.addColorStop(1, "rgba(11,8,21,0.35)");
   ctx.fillStyle = grad;
-  ctx.fillRect(0, H * 0.78, W, H * 0.22);
+  ctx.fillRect(0, H * 0.82, W, H * 0.18);
 
   // Zone sûre TikTok/Reels (hors UI : back/search en haut, like/share à
   // droite, légende/musique en bas) : 720x1000px, ancrée à gauche=160, bas=1350.

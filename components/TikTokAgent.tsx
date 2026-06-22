@@ -94,6 +94,7 @@ function SlidePicker({
   restaurantNom,
   restaurantAdresse,
   onSelect,
+  onEditText,
 }: {
   slide: AgentSlide;
   slideIndex: number;
@@ -101,6 +102,7 @@ function SlidePicker({
   restaurantNom: string;
   restaurantAdresse: string;
   onSelect: (rIdx: number, sIdx: number, url: string, src: string, thumb?: string) => void;
+  onEditText: (rIdx: number, sIdx: number, field: "titre" | "sousTitre", value: string) => void;
 }) {
   const [photos, setPhotos] = useState<PexelsPhoto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -209,14 +211,8 @@ function SlidePicker({
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 6 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: "10px", fontWeight: 700, color: colors.violet }}>
-            Slide {slideIndex + 1}
-          </div>
-          <div style={{ fontSize: "12px", fontWeight: 600, color: colors.texte, wordBreak: "break-word" }}>{slide.titre}</div>
-          {slide.sousTitre && (
-            <div style={{ fontSize: "10px", color: colors.muted, wordBreak: "break-word" }}>{slide.sousTitre}</div>
-          )}
+        <div style={{ fontSize: "10px", fontWeight: 700, color: colors.violet }}>
+          Slide {slideIndex + 1}
         </div>
         {isSelected && (
           <span style={{ fontSize: 11, color: "#4ade80", padding: "2px 8px", background: "#0d2a1a", borderRadius: 6 }}>
@@ -224,6 +220,41 @@ function SlidePicker({
           </span>
         )}
       </div>
+
+      {/* Textes éditables (générés par l'IA, modifiables à la main) */}
+      <input
+        value={slide.titre}
+        onChange={(e) => onEditText(restaurantIndex, slideIndex, "titre", e.target.value)}
+        placeholder="Titre de la slide"
+        style={{
+          width: "100%",
+          marginTop: 6,
+          padding: "6px 8px",
+          fontSize: 12,
+          fontWeight: 600,
+          color: colors.texte,
+          background: colors.bg,
+          border: `1px solid ${colors.border}`,
+          borderRadius: 6,
+          boxSizing: "border-box",
+        }}
+      />
+      <input
+        value={slide.sousTitre}
+        onChange={(e) => onEditText(restaurantIndex, slideIndex, "sousTitre", e.target.value)}
+        placeholder="Sous-titre (optionnel)"
+        style={{
+          width: "100%",
+          marginTop: 4,
+          padding: "6px 8px",
+          fontSize: 11,
+          color: colors.muted,
+          background: colors.bg,
+          border: `1px solid ${colors.border}`,
+          borderRadius: 6,
+          boxSizing: "border-box",
+        }}
+      />
 
       {(!searched || loading) && (
         <Loader3D compact label="Recherche des photos HD" />
@@ -569,10 +600,9 @@ async function composeSlide(slide: AgentSlide, canvas: HTMLCanvasElement): Promi
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
 
-      // Photo NETTE, plein largeur, en haut. Cadre proche du carré (recadrage
-      // doux, PAS de sur-zoom 9:16) et AUCUN flou. La photo descend juste
-      // assez pour laisser la zone de texte en bas.
-      const PHOTO_H = Math.round(H * 0.62); // ~1190px
+      // Photo NETTE en PLEIN CADRE 9:16 (occupe tout l'écran), sans flou.
+      // Les bulles de texte se posent par-dessus en bas (elles sont opaques).
+      const PHOTO_H = H;
       const cover = Math.max(W / iw, PHOTO_H / ih);
       const dw = Math.round(iw * cover);
       const dh = Math.round(ih * cover);
@@ -623,12 +653,12 @@ async function composeSlide(slide: AgentSlide, canvas: HTMLCanvasElement): Promi
     }
   }
 
-  // Léger renfort de lisibilité tout en bas (la photo est en haut)
-  const grad = ctx.createLinearGradient(0, H * 0.78, 0, H);
+  // Très léger fondu en bas pour la lisibilité, sans masquer la photo.
+  const grad = ctx.createLinearGradient(0, H * 0.82, 0, H);
   grad.addColorStop(0, "rgba(11,8,21,0)");
-  grad.addColorStop(1, "rgba(11,8,21,0.85)");
+  grad.addColorStop(1, "rgba(11,8,21,0.35)");
   ctx.fillStyle = grad;
-  ctx.fillRect(0, H * 0.78, W, H * 0.22);
+  ctx.fillRect(0, H * 0.82, W, H * 0.18);
 
   // ── Bulles texte cantonnées à la zone sûre TikTok/Reels ───────
   // Zone sûre (hors UI : back/search en haut, like/share à droite,
@@ -830,6 +860,20 @@ export default function TikTokAgent() {
         )
       );
     });
+  }
+
+  // Édition manuelle des textes générés par l'IA (titre / sous-titre).
+  function editSlideText(rIdx: number, sIdx: number, field: "titre" | "sousTitre", value: string) {
+    setRestaurants((prev) =>
+      prev.map((r, i) =>
+        i !== rIdx
+          ? r
+          : {
+              ...r,
+              slides: r.slides.map((s, j) => (j !== sIdx ? s : { ...s, [field]: value })),
+            }
+      )
+    );
   }
 
   async function compose(rIdx: number) {
@@ -1048,6 +1092,7 @@ export default function TikTokAgent() {
                   restaurantNom={r.nom}
                   restaurantAdresse={r.adresse}
                   onSelect={selectImage}
+                  onEditText={editSlideText}
                 />
               ))}
             </div>
