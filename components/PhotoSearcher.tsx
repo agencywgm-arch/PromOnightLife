@@ -477,6 +477,61 @@ export default function PhotoSearcher() {
         </button>
       </div>
 
+      {/* Vérification d'identité du restaurant : liens vers les VRAIES fiches
+          (pas de faux badge — le client clique et constate lui-même). */}
+      {query.trim() && (
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            flexWrap: "wrap",
+            margin: "0 0 12px",
+            fontSize: 11,
+          }}
+        >
+          <span style={{ color: colors.muted }}>Vérifier que c&apos;est le bon resto :</span>
+          <a
+            href={`https://www.tripadvisor.fr/Search?q=${encodeURIComponent(query.trim())}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              padding: "3px 10px",
+              borderRadius: 999,
+              textDecoration: "none",
+              fontWeight: 700,
+              color: "#00aa6c",
+              background: "rgba(0,170,108,0.12)",
+              border: "1px solid rgba(0,170,108,0.4)",
+            }}
+          >
+            🦉 TripAdvisor ↗
+          </a>
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query.trim())}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              padding: "3px 10px",
+              borderRadius: 999,
+              textDecoration: "none",
+              fontWeight: 700,
+              color: "#4285F4",
+              background: "rgba(66,133,244,0.12)",
+              border: "1px solid rgba(66,133,244,0.4)",
+            }}
+          >
+            📍 Google Maps ↗
+          </a>
+        </div>
+      )}
+
       {error && (
         <p style={{ fontSize: 12, color: colors.rouge, margin: "8px 0" }}>⚠️ {error}</p>
       )}
