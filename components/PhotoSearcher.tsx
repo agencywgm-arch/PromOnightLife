@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import { card, btnPrimary, btnGhost, input, colors } from "@/lib/ui";
 import Loader3D from "@/components/Loader3D";
-import { createContenu } from "@/lib/actions";
 import { snapshotImage } from "@/lib/imageSnapshot";
 import { useRouter } from "next/navigation";
 
@@ -412,8 +411,13 @@ export default function PhotoSearcher() {
       fd.set("scoreGlobal", "75");
       fd.set("scoreViral", "70");
       fd.set("scoreLuxe", "75");
-      const result = await createContenu(fd);
-      if (!result.ok) throw new Error(result.message || "Sauvegarde impossible");
+      const res = await fetch("/api/contenu", { method: "POST", body: fd });
+      const result = await res
+        .json()
+        .catch(() => ({ ok: false, message: "Réponse invalide du serveur" }));
+      if (!res.ok || !result?.ok) {
+        throw new Error(result?.message || `Sauvegarde impossible (${res.status})`);
+      }
       router.refresh();
       setSlides([]);
       setCaption("");

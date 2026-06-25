@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { createContenu } from "@/lib/actions";
 import { snapshotImage } from "@/lib/imageSnapshot";
 import { card, btnPrimary, btnGhost, input, colors } from "@/lib/ui";
 import Loader3D from "@/components/Loader3D";
@@ -901,8 +900,13 @@ export default function TikTokAgent() {
       fd.set("scoreGlobal", "80");
       fd.set("scoreViral", "85");
       fd.set("scoreLuxe", "75");
-      const result = await createContenu(fd);
-      if (!result.ok) throw new Error(result.message || "Sauvegarde impossible");
+      const res = await fetch("/api/contenu", { method: "POST", body: fd });
+      const result = await res
+        .json()
+        .catch(() => ({ ok: false, message: "Réponse invalide du serveur" }));
+      if (!res.ok || !result?.ok) {
+        throw new Error(result?.message || `Sauvegarde impossible (${res.status})`);
+      }
       setSaved((prev) => ({ ...prev, [rIdx]: true }));
       router.refresh();
       // Ferme le panneau si tous les restaurants sont sauvegardés
@@ -1031,6 +1035,33 @@ export default function TikTokAgent() {
                 <p style={{ margin: "2px 0 0", fontSize: 12, color: colors.muted }}>
                   🕐 {r.horaires} · 💶 {r.prix} · 🍽️ {r.cuisine}
                 </p>
+                {/* Vérification d'identité : liens vers les vraies fiches. */}
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
+                  <a
+                    href={`https://www.tripadvisor.fr/Search?q=${encodeURIComponent(`${r.nom} ${r.adresse}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 9px",
+                      borderRadius: 999, textDecoration: "none", fontSize: 11, fontWeight: 700,
+                      color: "#00aa6c", background: "rgba(0,170,108,0.12)", border: "1px solid rgba(0,170,108,0.4)",
+                    }}
+                  >
+                    🦉 TripAdvisor ↗
+                  </a>
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${r.nom} ${r.adresse}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 9px",
+                      borderRadius: 999, textDecoration: "none", fontSize: 11, fontWeight: 700,
+                      color: "#4285F4", background: "rgba(66,133,244,0.12)", border: "1px solid rgba(66,133,244,0.4)",
+                    }}
+                  >
+                    📍 Google Maps ↗
+                  </a>
+                </div>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {!isSaved ? (
