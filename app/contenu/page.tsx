@@ -4,6 +4,8 @@ import PhotoSearcher from "@/components/PhotoSearcher";
 import TikTokAgent from "@/components/TikTokAgent";
 import ContenuWorkspace from "@/components/ContenuWorkspace";
 import NotificationSettings from "@/components/NotificationSettings";
+import DailyContentBanner from "@/components/DailyContentBanner";
+import { todaysAutoBatch } from "@/lib/dailyBatch";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { updateContenuStatut, deleteContenu } from "@/lib/actions";
@@ -32,6 +34,14 @@ export default async function ContenuPage() {
   const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
   const pushConfigured = !!process.env.VAPID_PRIVATE_KEY;
 
+  // Pipeline de contenu quotidien : combien de carrousels auto déjà prêts ?
+  let dailyCount = 0;
+  try {
+    dailyCount = (await todaysAutoBatch()).length;
+  } catch (e) {
+    console.error("[contenu] lecture lot du jour impossible :", e);
+  }
+
   /* ── Onglet Générer ──────────────────────────────────────── */
   const genererTab = !hasAnthropicKey ? (
     <div
@@ -52,7 +62,10 @@ export default async function ContenuPage() {
       </p>
     </div>
   ) : (
-    <TikTokAgent />
+    <>
+      {hasAnthropicKey && <DailyContentBanner todayCount={dailyCount} />}
+      <TikTokAgent />
+    </>
   );
 
   /* ── Onglet Bibliothèque ─────────────────────────────────── */
