@@ -5,6 +5,7 @@ import TikTokAgent from "@/components/TikTokAgent";
 import ContenuWorkspace from "@/components/ContenuWorkspace";
 import NotificationSettings from "@/components/NotificationSettings";
 import DailyContentBanner from "@/components/DailyContentBanner";
+import MessagesPanel from "@/components/MessagesPanel";
 import { todaysAutoBatch } from "@/lib/dailyBatch";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -20,7 +21,11 @@ const VAPID_PUBLIC_KEY =
   process.env.VAPID_PUBLIC_KEY ||
   "BMRXHptE8HbQsgy0wS6Ha8OR_GCIk3Dv1_0MeZAEXP2xXqSRUTcTrYgOlEVRHF9AflMyGIaiWG5OjlxgWwy3N4c";
 
-export default async function ContenuPage() {
+export default async function ContenuPage({
+  searchParams,
+}: {
+  searchParams?: { v?: string };
+}) {
   await requireAuth();
 
   // Résilience : une panne/lenteur DB ne doit jamais produire un écran noir.
@@ -40,6 +45,14 @@ export default async function ContenuPage() {
     dailyCount = (await todaysAutoBatch()).length;
   } catch (e) {
     console.error("[contenu] lecture lot du jour impossible :", e);
+  }
+
+  // Badge du volet Messages : conversations en attente d'un humain.
+  let needsHuman = 0;
+  try {
+    needsHuman = await prisma.conversation.count({ where: { status: "NEEDS_HUMAN" } });
+  } catch (e) {
+    console.error("[contenu] comptage NEEDS_HUMAN impossible :", e);
   }
 
   /* ── Onglet Générer ──────────────────────────────────────── */
@@ -182,10 +195,13 @@ export default async function ContenuPage() {
   return (
     <ContenuWorkspace
       libCount={contenus.length}
+      needsHuman={needsHuman}
+      initialVolet={searchParams?.v === "messages" ? "messages" : undefined}
       generer={genererTab}
       photos={<PhotoSearcher />}
       biblio={biblioTab}
       alertes={<NotificationSettings vapidPublicKey={VAPID_PUBLIC_KEY} pushConfigured={pushConfigured} />}
+      messages={<MessagesPanel />}
     />
   );
 }
