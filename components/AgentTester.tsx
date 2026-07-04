@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { colors } from "@/lib/ui";
+import { ig, igCard, igInput, igAvatar } from "@/lib/igStyle";
 
 type Msg =
   | { role: "girl"; text: string }
@@ -13,7 +13,7 @@ type Msg =
  * en direct comment l'agent réagirait, pour le calibrer (FAQ + contexte).
  * N'affecte aucune vraie conversation.
  */
-export default function AgentTester({ handle = "nightlife.paris" }: { handle?: string }) {
+export default function AgentTester({ handle = "guest_for_dinner" }: { handle?: string }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -63,71 +63,37 @@ export default function AgentTester({ handle = "nightlife.paris" }: { handle?: s
     }
   }
 
-  const IG_GRADIENT = "linear-gradient(135deg, #405DE6, #833AB4, #C13584, #E1306C)";
+  const av = igAvatar(40, "🥂");
 
   return (
-    <div
-      style={{
-        maxWidth: 460,
-        margin: "0 auto",
-        borderRadius: 20,
-        overflow: "hidden",
-        border: `1px solid ${colors.border}`,
-        background: "#0d0d12",
-        boxShadow: "0 12px 40px rgba(0,0,0,0.45)",
-      }}
-    >
-      {/* Header façon Instagram */}
+    <div style={{ ...igCard, maxWidth: 460, margin: "0 auto", boxShadow: "0 12px 40px rgba(0,0,0,0.45)" }}>
+      {/* En-tête façon conversation Instagram */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           gap: 10,
           padding: "12px 14px",
-          borderBottom: `1px solid ${colors.border}`,
-          background: "#15151c",
+          borderBottom: `1px solid ${ig.border}`,
         }}
       >
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            padding: 2,
-            background: IG_GRADIENT,
-            flexShrink: 0,
-          }}
-        >
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
-              borderRadius: "50%",
-              background: "#0d0d12",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 18,
-            }}
-          >
-            🌃
-          </div>
-        </div>
+        <div style={av.ring}><div style={av.inner}>{av.emoji}</div></div>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>{handle}</div>
-          <div style={{ fontSize: 11, color: colors.vert }}>● Agent IA · mode test</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: ig.text }}>{handle}</div>
+          <div style={{ fontSize: 11, color: ig.muted }}>Agent IA · mode test — tu joues l&apos;abonnée</div>
         </div>
         {messages.length > 0 && (
           <button
             onClick={() => setMessages([])}
             style={{
               background: "transparent",
-              border: `1px solid ${colors.border}`,
-              color: colors.muted,
+              border: `1px solid ${ig.border}`,
+              color: ig.muted,
               borderRadius: 8,
               padding: "5px 10px",
               fontSize: 11,
               cursor: "pointer",
+              fontFamily: ig.font,
             }}
           >
             Réinitialiser
@@ -141,14 +107,15 @@ export default function AgentTester({ handle = "nightlife.paris" }: { handle?: s
         style={{
           height: 380,
           overflowY: "auto",
-          padding: "16px 14px",
+          padding: "16px 12px",
           display: "flex",
           flexDirection: "column",
           gap: 8,
+          background: ig.bg,
         }}
       >
         {messages.length === 0 && (
-          <div style={{ margin: "auto", textAlign: "center", color: colors.muted, fontSize: 13, lineHeight: 1.6, padding: "0 24px" }}>
+          <div style={{ margin: "auto", textAlign: "center", color: ig.muted, fontSize: 13, lineHeight: 1.6, padding: "0 24px" }}>
             Écris comme le ferait une abonnée<br />(ex: « c&apos;est vraiment gratuit le dîner ? »)<br />
             et vois comment l&apos;agent répondrait.
           </div>
@@ -157,7 +124,7 @@ export default function AgentTester({ handle = "nightlife.paris" }: { handle?: s
           if (m.role === "system") {
             return (
               <div key={i} style={{ alignSelf: "center", maxWidth: "90%", textAlign: "center" }}>
-                <span style={{ fontSize: 11.5, color: colors.or || "#f5b83d", background: "#1c1710", padding: "6px 12px", borderRadius: 12, display: "inline-block", lineHeight: 1.4 }}>
+                <span style={{ fontSize: 11.5, color: ig.muted, background: ig.elevated, padding: "6px 12px", borderRadius: 12, display: "inline-block", lineHeight: 1.4 }}>
                   {m.text}
                 </span>
               </div>
@@ -168,15 +135,15 @@ export default function AgentTester({ handle = "nightlife.paris" }: { handle?: s
             <div key={i} style={{ display: "flex", justifyContent: isGirl ? "flex-end" : "flex-start" }}>
               <div
                 style={{
-                  maxWidth: "76%",
+                  maxWidth: "72%",
                   padding: "9px 13px",
-                  borderRadius: 18,
+                  borderRadius: 22,
                   fontSize: 14,
                   lineHeight: 1.4,
                   color: "#fff",
-                  background: isGirl ? IG_GRADIENT : "#2a2a32",
-                  borderBottomRightRadius: isGirl ? 4 : 18,
-                  borderBottomLeftRadius: isGirl ? 18 : 4,
+                  background: isGirl ? ig.blue : ig.bubbleIn,
+                  borderBottomRightRadius: isGirl ? 6 : 22,
+                  borderBottomLeftRadius: isGirl ? 22 : 6,
                   whiteSpace: "pre-wrap",
                   wordBreak: "break-word",
                 }}
@@ -188,7 +155,7 @@ export default function AgentTester({ handle = "nightlife.paris" }: { handle?: s
         })}
         {loading && (
           <div style={{ display: "flex", justifyContent: "flex-start" }}>
-            <div style={{ padding: "10px 15px", borderRadius: 18, background: "#2a2a32", color: colors.muted, fontSize: 14 }}>
+            <div style={{ padding: "10px 15px", borderRadius: 22, background: ig.bubbleIn, color: ig.muted, fontSize: 14 }}>
               …
             </div>
           </div>
@@ -196,37 +163,27 @@ export default function AgentTester({ handle = "nightlife.paris" }: { handle?: s
       </div>
 
       {/* Barre de saisie */}
-      <div style={{ display: "flex", gap: 8, padding: "10px 12px", borderTop: `1px solid ${colors.border}`, background: "#15151c" }}>
+      <div style={{ display: "flex", gap: 8, padding: "10px 12px", borderTop: `1px solid ${ig.border}`, alignItems: "center" }}>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
           placeholder="Message…"
           disabled={loading}
-          style={{
-            flex: 1,
-            background: "#0d0d12",
-            border: `1px solid ${colors.border}`,
-            borderRadius: 20,
-            padding: "10px 14px",
-            color: "#fff",
-            fontSize: 14,
-            outline: "none",
-          }}
+          style={{ ...igInput, flex: 1 }}
         />
         <button
           onClick={send}
           disabled={loading || !input.trim()}
           style={{
-            background: IG_GRADIENT,
-            color: "#fff",
+            background: "transparent",
             border: "none",
-            borderRadius: 20,
-            padding: "0 18px",
-            fontSize: 14,
+            color: ig.blue,
             fontWeight: 700,
+            fontSize: 14,
             cursor: loading || !input.trim() ? "default" : "pointer",
-            opacity: loading || !input.trim() ? 0.5 : 1,
+            opacity: loading || !input.trim() ? 0.4 : 1,
+            fontFamily: ig.font,
           }}
         >
           Envoyer

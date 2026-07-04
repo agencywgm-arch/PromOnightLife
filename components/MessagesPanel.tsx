@@ -5,7 +5,7 @@ import AgentTester from "@/components/AgentTester";
 import AgentScenarios from "@/components/AgentScenarios";
 import { prisma } from "@/lib/prisma";
 import { ensureDmDefaults } from "@/lib/dmSeed";
-import { colors } from "@/lib/ui";
+import { ig } from "@/lib/igStyle";
 
 /**
  * Volet Messages de l'app (serveur) : agent DM, boîte de réception, testeur,
@@ -75,22 +75,42 @@ export default async function MessagesPanel() {
   const needsHuman = conversations.filter((c) => c.status === "NEEDS_HUMAN").length;
   const hasAnthropic = !!process.env.ANTHROPIC_API_KEY;
 
+  const sectionTitle = {
+    fontSize: 14,
+    fontWeight: 700 as const,
+    margin: "0 0 3px",
+    color: ig.text,
+    maxWidth: 460,
+    marginLeft: "auto",
+    marginRight: "auto",
+  };
+  const sectionSub = {
+    fontSize: 12.5,
+    color: ig.muted,
+    margin: "0 auto 10px",
+    lineHeight: 1.45,
+    maxWidth: 460,
+  };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 22, fontFamily: ig.font }}>
       {needsHuman > 0 && (
         <p
           style={{
-            margin: 0,
+            margin: "0 auto",
+            maxWidth: 460,
+            width: "100%",
+            boxSizing: "border-box",
             fontSize: 13,
             fontWeight: 700,
-            color: colors.or,
-            background: "#1c1710",
-            border: `1px solid ${colors.or}44`,
-            borderRadius: 10,
-            padding: "10px 14px",
+            color: ig.text,
+            background: ig.elevated,
+            border: `1px solid ${ig.border}`,
+            borderRadius: 14,
+            padding: "11px 14px",
           }}
         >
-          ⚠️ {needsHuman} conversation{needsHuman > 1 ? "s" : ""} à traiter par toi
+          🚩 {needsHuman} conversation{needsHuman > 1 ? "s" : ""} à traiter par toi
         </p>
       )}
 
@@ -100,10 +120,8 @@ export default async function MessagesPanel() {
 
       {/* Bac à sable de calibration façon DM Instagram */}
       <div>
-        <h2 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 4px" }}>
-          🧪 Tester l&apos;agent
-        </h2>
-        <p style={{ fontSize: 13, color: colors.muted, margin: "0 0 12px", lineHeight: 1.5 }}>
+        <h2 style={sectionTitle}>🧪 Tester l&apos;agent</h2>
+        <p style={sectionSub}>
           Écris-lui comme le ferait une abonnée — rien n&apos;est envoyé pour de vrai.
         </p>
         <AgentTester />
@@ -111,10 +129,8 @@ export default async function MessagesPanel() {
 
       {/* Historique de démo : conversations déjà gérées par l'agent (côté compte) */}
       <div>
-        <h2 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 4px" }}>
-          📲 Exemples de conversations
-        </h2>
-        <p style={{ fontSize: 13, color: colors.muted, margin: "0 0 12px", lineHeight: 1.5 }}>
+        <h2 style={sectionTitle}>📲 Exemples de conversations</h2>
+        <p style={sectionSub}>
           L&apos;historique de l&apos;agent tel qu&apos;il apparaît côté compte Instagram.
         </p>
         <AgentScenarios />
