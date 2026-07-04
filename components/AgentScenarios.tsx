@@ -27,19 +27,22 @@ const SCENARIOS: Scenario[] = [
     avatar: "🥂",
     time: "2 min",
     lines: [
-      { from: "girl", text: "coucou j'ai vu votre post, c'est vraiment gratuit le dîner ?" },
-      { from: "agent", text: "Hello 🌟 Oui totalement ! On invite les filles à un dîner offert dans un beau resto parisien, puis entrée VIP offerte à la soirée juste après. Zéro frais pour toi 💫" },
-      { from: "girl", text: "ah trop bien !! je m'inscris comment ?" },
-      { from: "agent", text: "Remplis le petit formulaire dans notre bio (prénom, âge, ton Insta) et on te confirme ta place très vite 😊" },
+      { from: "agent", text: "Hello ! Mardi, dîner au restaurant festif puis soirée au club 🪩 Ça te dit d'être mon invitée avec une copine ? Dîner et table privée avec champagne offerts ✨" },
+      { from: "girl", text: "hello ! oui pourquoi pas 😍 c'est vraiment gratuit ??" },
+      { from: "agent", text: "Oui, c'est offert : le dîner et la table VIP font partie de ma collaboration avec les lieux, en échange de ta participation à la soirée. Le resto demande parfois juste un avis Google et une story Insta 😊" },
+      { from: "girl", text: "ok top ! je viens avec ma copine alors" },
+      { from: "agent", text: "Parfait ! Envoie-moi son Instagram pour que je la valide sur la guestlist 💫" },
     ],
   },
   {
     name: "chloe.mrl",
-    avatar: "✨",
-    time: "20 min",
+    avatar: "⏰",
+    time: "25 min",
     lines: [
-      { from: "girl", text: "c'est quoi le concept exactement ?" },
-      { from: "agent", text: "On réunit une jolie table de filles pour un dîner offert dans un resto branché de Paris, ambiance chill et fun, puis on continue en soirée privée (entrée + première conso offertes). Toi tu profites, c'est cadeau 🥂✨" },
+      { from: "girl", text: "Hello, yes ! At what time ?" },
+      { from: "agent", text: "Meeting at the restaurant at 9pm sharp — dinner around 10pm, then the club around midnight 🪩" },
+      { from: "girl", text: "perfect, and the dress code?" },
+      { from: "agent", text: "Elegant dress code is mandatory: evening wear and heels ✨" },
     ],
   },
   {
@@ -47,10 +50,8 @@ const SCENARIOS: Scenario[] = [
     avatar: "💃",
     time: "1 h",
     lines: [
-      { from: "girl", text: "faut consommer un minimum ou payer quelque chose sur place ?" },
-      { from: "agent", text: "Non 🙌 Le dîner et ta première conso sont offerts. Tu n'as rien à régler pour être sur la guestlist." },
-      { from: "girl", text: "et faut avoir quel âge ?" },
-      { from: "agent", text: "C'est réservé aux 21 ans et + 🎉" },
+      { from: "girl", text: "c'est quoi le concept exactement ? on doit faire quoi en échange ?" },
+      { from: "agent", text: "Je collabore avec plusieurs restos festifs et clubs parisiens : tu es invitée avec une copine à un dîner offert, puis soirée au club à notre table VIP. Au resto comme au club, vous êtes placées à des tables réservées aux filles — on ne te demandera jamais d'interagir avec qui que ce soit 🥂" },
     ],
   },
   {
@@ -58,8 +59,8 @@ const SCENARIOS: Scenario[] = [
     avatar: "📍",
     time: "4 h",
     lines: [
-      { from: "girl", text: "c'est dans quel resto et c'est où ?" },
-      { from: "agent", text: "On tourne sur les meilleures adresses de Paris ✨ Le resto exact et l'adresse sont envoyés en DM la veille aux filles confirmées, pour garder le côté privé 📍" },
+      { from: "girl", text: "What's the address?" },
+      { from: "agent", text: "I'll send you the exact restaurant and address in DM once your spot is confirmed (your Insta + your friend's) 📍" },
     ],
   },
   {
@@ -67,17 +68,19 @@ const SCENARIOS: Scenario[] = [
     avatar: "🖤",
     time: "6 h",
     lines: [
-      { from: "girl", text: "je peux ramener mon copain au dîner ?" },
-      { from: "human", text: "L'agent a laissé la main : le dîner offert est réservé aux filles, demande d'exception (accompagnant homme) — à gérer par toi." },
+      { from: "girl", text: "je peux venir avec mon copain ?" },
+      { from: "agent", text: "La soirée est réservée aux filles — les tables au resto et au club sont 100% filles. Tu peux venir avec une copine : envoie-moi son Instagram 😊" },
+      { from: "girl", text: "et si il reste juste au bar sans venir à la table ?" },
+      { from: "human", text: "L'agent a laissé la main : négociation d'une exception — à trancher par toi." },
     ],
   },
   {
     name: "jade.vlt",
-    avatar: "🌙",
+    avatar: "🚕",
     time: "hier",
     lines: [
-      { from: "girl", text: "attendez vous payez combien les filles pour venir ?" },
-      { from: "human", text: "L'agent a laissé la main : question sensible / ambiguë (rémunération) — malentendu à clarifier toi-même avec tact." },
+      { from: "girl", text: "Je suis arrivée à l'adresse là mais il n'y a pas de restaurant ??" },
+      { from: "human", text: "L'agent a laissé la main : urgence logistique le soir même (invitée perdue sur place) — à gérer par toi immédiatement." },
     ],
   },
 ];
