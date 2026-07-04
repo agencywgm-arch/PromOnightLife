@@ -3,6 +3,7 @@ import MessagesInbox, { type ConversationDTO } from "@/components/MessagesInbox"
 import FaqManager, { type FaqDTO } from "@/components/FaqManager";
 import DmAgentToggle from "@/components/DmAgentToggle";
 import AgentTester from "@/components/AgentTester";
+import AgentScenarios from "@/components/AgentScenarios";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { pageTitle, colors } from "@/lib/ui";
@@ -101,6 +102,18 @@ export default async function MessagesPage() {
             puis re-teste ici jusqu&apos;à ce que ses réponses te conviennent. Rien n&apos;est envoyé pour de vrai.
           </p>
           <AgentTester />
+        </div>
+
+        {/* Historique de démo : conversations déjà gérées par l'agent (côté compte) */}
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 4px" }}>
+            📲 Exemples de conversations
+          </h2>
+          <p style={{ fontSize: 13, color: colors.muted, margin: "0 0 12px", lineHeight: 1.5 }}>
+            L&apos;historique de l&apos;agent tel qu&apos;il apparaît côté compte Instagram. Clique une
+            conversation pour voir comment il répond — et quand il laisse la main à un humain.
+          </p>
+          <AgentScenarios />
         </div>
 
         <MessagesInbox initialConversations={conversations} />
