@@ -2,6 +2,7 @@ import Nav from "@/components/Nav";
 import MessagesInbox, { type ConversationDTO } from "@/components/MessagesInbox";
 import FaqManager, { type FaqDTO } from "@/components/FaqManager";
 import DmAgentToggle from "@/components/DmAgentToggle";
+import AgentTester from "@/components/AgentTester";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { pageTitle, colors } from "@/lib/ui";
@@ -89,6 +90,18 @@ export default async function MessagesPage() {
           contexte={agentContexte}
           hasAnthropic={hasAnthropic}
         />
+
+        {/* Bac à sable de calibration façon DM Instagram */}
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 4px" }}>
+            🧪 Tester &amp; calibrer l&apos;agent
+          </h2>
+          <p style={{ fontSize: 13, color: colors.muted, margin: "0 0 12px", lineHeight: 1.5 }}>
+            Parle à l&apos;agent comme une abonnée. Ajuste la FAQ et le contexte ci-dessus,
+            puis re-teste ici jusqu&apos;à ce que ses réponses te conviennent. Rien n&apos;est envoyé pour de vrai.
+          </p>
+          <AgentTester />
+        </div>
 
         <MessagesInbox initialConversations={conversations} />
 

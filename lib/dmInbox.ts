@@ -17,7 +17,7 @@ export type InboundMessage = {
 };
 
 /** L'agent global est-il activé ? (AgentConfig "dm-agent") */
-async function agentConfig(): Promise<{ active: boolean; contexte: string }> {
+export async function agentConfig(): Promise<{ active: boolean; contexte: string }> {
   try {
     const cfg = await prisma.agentConfig.findUnique({ where: { agentId: "dm-agent" } });
     if (!cfg) return { active: false, contexte: "" };
@@ -28,7 +28,7 @@ async function agentConfig(): Promise<{ active: boolean; contexte: string }> {
   }
 }
 
-async function loadFaq(): Promise<FaqItem[]> {
+export async function loadFaq(): Promise<FaqItem[]> {
   try {
     const rows = await prisma.faqEntry.findMany({
       where: { enabled: true },
