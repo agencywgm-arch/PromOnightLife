@@ -24,49 +24,51 @@ type Scenario = {
 const SCENARIOS: Scenario[] = [
   {
     name: "lea.prsn",
-    avatar: "💃",
+    avatar: "🥂",
     time: "2 min",
     lines: [
-      { from: "girl", text: "coucou ! c'est quoi le dress code pour samedi ?" },
-      { from: "agent", text: "Hello 🌟 Tenue chic et élégante — jolie robe ou total look soigné, talons conseillés, pas de baskets. Hâte de te voir !" },
-      { from: "girl", text: "parfait merci !!" },
+      { from: "girl", text: "coucou j'ai vu votre post, c'est vraiment gratuit le dîner ?" },
+      { from: "agent", text: "Hello 🌟 Oui totalement ! On invite les filles à un dîner offert dans un beau resto parisien, puis entrée VIP offerte à la soirée juste après. Zéro frais pour toi 💫" },
+      { from: "girl", text: "ah trop bien !! je m'inscris comment ?" },
+      { from: "agent", text: "Remplis le petit formulaire dans notre bio (prénom, âge, ton Insta) et on te confirme ta place très vite 😊" },
     ],
   },
   {
     name: "chloe.mrl",
     avatar: "✨",
-    time: "18 min",
+    time: "20 min",
     lines: [
-      { from: "girl", text: "salut, comment je fais pour venir à vos soirées ?" },
-      { from: "agent", text: "Coucou ! Remplis le petit formulaire dans notre bio, on revient vers toi très vite pour te confirmer 💫" },
+      { from: "girl", text: "c'est quoi le concept exactement ?" },
+      { from: "agent", text: "On réunit une jolie table de filles pour un dîner offert dans un resto branché de Paris, ambiance chill et fun, puis on continue en soirée privée (entrée + première conso offertes). Toi tu profites, c'est cadeau 🥂✨" },
     ],
   },
   {
     name: "manon.___",
-    avatar: "🥂",
+    avatar: "💃",
     time: "1 h",
     lines: [
-      { from: "girl", text: "c'est payant ? et faut avoir quel âge ?" },
-      { from: "agent", text: "Pour les filles sur la guestlist, l'entrée est offerte 🎉 Et c'est réservé aux 21 ans et +." },
-      { from: "girl", text: "ok top" },
-    ],
-  },
-  {
-    name: "sarah.dnc",
-    avatar: "🖤",
-    time: "3 h",
-    lines: [
-      { from: "girl", text: "je peux venir avec 3 potes mecs ?" },
-      { from: "human", text: "L'agent a laissé la main : demande d'exception (invités hommes) — à gérer par toi." },
+      { from: "girl", text: "faut consommer un minimum ou payer quelque chose sur place ?" },
+      { from: "agent", text: "Non 🙌 Le dîner et ta première conso sont offerts. Tu n'as rien à régler pour être sur la guestlist." },
+      { from: "girl", text: "et faut avoir quel âge ?" },
+      { from: "agent", text: "C'est réservé aux 21 ans et + 🎉" },
     ],
   },
   {
     name: "ines.pht",
     avatar: "📍",
-    time: "5 h",
+    time: "4 h",
     lines: [
-      { from: "girl", text: "c'est où exactement ?" },
-      { from: "agent", text: "Le lieu exact est envoyé en DM la veille aux filles confirmées, pour garder le côté privé ✨" },
+      { from: "girl", text: "c'est dans quel resto et c'est où ?" },
+      { from: "agent", text: "On tourne sur les meilleures adresses de Paris ✨ Le resto exact et l'adresse sont envoyés en DM la veille aux filles confirmées, pour garder le côté privé 📍" },
+    ],
+  },
+  {
+    name: "sarah.dnc",
+    avatar: "🖤",
+    time: "6 h",
+    lines: [
+      { from: "girl", text: "je peux ramener mon copain au dîner ?" },
+      { from: "human", text: "L'agent a laissé la main : le dîner offert est réservé aux filles, demande d'exception (accompagnant homme) — à gérer par toi." },
     ],
   },
   {
@@ -74,8 +76,8 @@ const SCENARIOS: Scenario[] = [
     avatar: "🌙",
     time: "hier",
     lines: [
-      { from: "girl", text: "franchement la dernière fois c'était nul, y'avait personne" },
-      { from: "human", text: "L'agent a laissé la main : mécontentement / plainte — à gérer avec tact par toi." },
+      { from: "girl", text: "attendez vous payez combien les filles pour venir ?" },
+      { from: "human", text: "L'agent a laissé la main : question sensible / ambiguë (rémunération) — malentendu à clarifier toi-même avec tact." },
     ],
   },
 ];

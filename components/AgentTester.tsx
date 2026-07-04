@@ -149,7 +149,7 @@ export default function AgentTester({ handle = "nightlife.paris" }: { handle?: s
       >
         {messages.length === 0 && (
           <div style={{ margin: "auto", textAlign: "center", color: colors.muted, fontSize: 13, lineHeight: 1.6, padding: "0 24px" }}>
-            Écris comme le ferait une abonnée<br />(ex: « c&apos;est quoi le dress code ? »)<br />
+            Écris comme le ferait une abonnée<br />(ex: « c&apos;est vraiment gratuit le dîner ? »)<br />
             et vois comment l&apos;agent répondrait.
           </div>
         )}
