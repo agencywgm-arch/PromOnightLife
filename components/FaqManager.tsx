@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef } from "react";
 import { createFaq, updateFaq, toggleFaq, deleteFaq } from "@/lib/actions";
-import { card, input, btnPrimary, btnGhost, colors } from "@/lib/ui";
+import { ig, igCard, igInput } from "@/lib/igStyle";
 
 export type FaqDTO = {
   id: string;
@@ -45,45 +45,54 @@ export default function FaqManager({ initialFaq }: { initialFaq: FaqDTO[] }) {
     setFaq((prev) => prev.map((f) => (f.id === id ? { ...f, [field]: value } : f)));
   }
 
+  const fieldStyle = {
+    ...igInput,
+    width: "100%",
+    borderRadius: 12,
+    boxSizing: "border-box" as const,
+    fontSize: 13,
+    lineHeight: 1.45,
+  };
+
   return (
-    <div style={card}>
+    <div style={{ ...igCard, maxWidth: 460, margin: "0 auto" }}>
       <div
-        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
+        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", padding: 16 }}
         onClick={() => setOpen((v) => !v)}
       >
         <div>
-          <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
-            📚 Base de connaissances de l&apos;agent
+          <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: ig.text }}>
+            📚 Réponses de l&apos;agent
           </h2>
-          <p style={{ fontSize: 13, color: colors.muted, margin: "4px 0 0" }}>
-            {faq.length} réponse{faq.length > 1 ? "s" : ""} — l&apos;agent ne répond automatiquement
+          <p style={{ fontSize: 12.5, color: ig.muted, margin: "4px 0 0", lineHeight: 1.4 }}>
+            {faq.length} réponse{faq.length > 1 ? "s" : ""} — il ne répond seul
             qu&apos;aux questions couvertes ici.
           </p>
         </div>
-        <span style={{ color: colors.muted }}>{open ? "▲" : "▼"}</span>
+        <span style={{ color: ig.muted }}>{open ? "▲" : "▼"}</span>
       </div>
 
       {open && (
-        <div style={{ marginTop: 16 }}>
+        <div style={{ padding: "0 16px 16px" }}>
           {/* Liste éditable */}
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
             {faq.map((f) => (
               <div
                 key={f.id}
                 style={{
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: 10,
+                  border: `1px solid ${ig.border}`,
+                  borderRadius: 14,
                   padding: 12,
-                  background: f.enabled ? colors.bg : "transparent",
-                  opacity: f.enabled ? 1 : 0.55,
+                  background: f.enabled ? ig.elevated : "transparent",
+                  opacity: f.enabled ? 1 : 0.5,
                 }}
               >
                 <input
                   value={f.question}
                   onChange={(e) => edit(f.id, "question", e.target.value)}
                   onBlur={() => save(f)}
-                  placeholder="Question récurrente (ex: C'est quoi le dress code ?)"
-                  style={{ ...input, fontSize: 13, fontWeight: 600, marginBottom: 6 }}
+                  placeholder="Question récurrente (ex: C'est vraiment gratuit ?)"
+                  style={{ ...fieldStyle, fontWeight: 700, marginBottom: 6 }}
                 />
                 <textarea
                   value={f.answer}
@@ -91,14 +100,17 @@ export default function FaqManager({ initialFaq }: { initialFaq: FaqDTO[] }) {
                   onBlur={() => save(f)}
                   placeholder="Réponse validée que l'agent enverra"
                   rows={2}
-                  style={{ ...input, fontSize: 13, resize: "vertical", fontFamily: "inherit" }}
+                  style={{ ...fieldStyle, resize: "vertical" }}
                 />
-                <div style={{ display: "flex", gap: 10, marginTop: 8, alignItems: "center" }}>
-                  <label style={{ fontSize: 12, color: f.enabled ? colors.vert : colors.muted, display: "flex", gap: 6, alignItems: "center", cursor: "pointer" }}>
-                    <input type="checkbox" checked={f.enabled} onChange={(e) => toggle(f.id, e.target.checked)} />
+                <div style={{ display: "flex", gap: 12, marginTop: 8, alignItems: "center" }}>
+                  <label style={{ fontSize: 12, color: f.enabled ? ig.blue : ig.muted, display: "flex", gap: 6, alignItems: "center", cursor: "pointer", fontWeight: 600 }}>
+                    <input type="checkbox" checked={f.enabled} onChange={(e) => toggle(f.id, e.target.checked)} style={{ accentColor: ig.blue }} />
                     {f.enabled ? "Active" : "Désactivée"}
                   </label>
-                  <button onClick={() => remove(f.id)} style={{ ...btnGhost, fontSize: 11, padding: "4px 10px", color: colors.rouge, borderColor: `${colors.rouge}55` }}>
+                  <button
+                    onClick={() => remove(f.id)}
+                    style={{ background: "transparent", border: "none", color: ig.danger, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: ig.font, padding: 0 }}
+                  >
                     Supprimer
                   </button>
                 </div>
@@ -108,10 +120,24 @@ export default function FaqManager({ initialFaq }: { initialFaq: FaqDTO[] }) {
 
           {/* Ajout */}
           <form ref={formRef} action={add} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <input name="question" placeholder="Nouvelle question récurrente" style={{ ...input, fontSize: 13 }} required />
-            <textarea name="answer" placeholder="Réponse que l'agent enverra" rows={2} style={{ ...input, fontSize: 13, resize: "vertical", fontFamily: "inherit" }} required />
-            <button type="submit" style={{ ...btnPrimary, alignSelf: "flex-start", fontSize: 13 }}>
-              + Ajouter à la base
+            <input name="question" placeholder="Nouvelle question récurrente" style={fieldStyle} required />
+            <textarea name="answer" placeholder="Réponse que l'agent enverra" rows={2} style={{ ...fieldStyle, resize: "vertical" }} required />
+            <button
+              type="submit"
+              style={{
+                alignSelf: "flex-start",
+                background: ig.blue,
+                color: "#fff",
+                border: "none",
+                borderRadius: 10,
+                padding: "9px 16px",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: ig.font,
+              }}
+            >
+              + Ajouter
             </button>
           </form>
         </div>

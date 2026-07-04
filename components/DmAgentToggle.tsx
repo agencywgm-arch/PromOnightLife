@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { saveAgentConfig } from "@/lib/actions";
-import { card, input, btnPrimary, colors } from "@/lib/ui";
+import { ig, igCard, igInput } from "@/lib/igStyle";
 
 /**
  * Interrupteur global de l'agent de réponse automatique aux DM + contexte
@@ -31,12 +31,12 @@ export default function DmAgentToggle({
   }
 
   return (
-    <div style={{ ...card, marginBottom: 24 }}>
+    <div style={{ ...igCard, maxWidth: 460, margin: "0 auto", padding: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>🤖 Agent de réponse automatique</h2>
-          <p style={{ fontSize: 13, color: colors.muted, margin: "4px 0 0" }}>
-            Répond seul aux questions récurrentes, escalade le reste en « à traiter ».
+          <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: ig.text }}>🤖 Réponse automatique</h2>
+          <p style={{ fontSize: 12.5, color: ig.muted, margin: "4px 0 0", lineHeight: 1.4 }}>
+            Répond seul aux questions récurrentes, te laisse le reste.
           </p>
         </div>
         <label
@@ -46,13 +46,14 @@ export default function DmAgentToggle({
             alignItems: "center",
             fontSize: 13,
             fontWeight: 700,
-            color: isActive ? colors.vert : colors.muted,
+            color: isActive ? ig.blue : ig.muted,
             cursor: "pointer",
           }}
         >
           <input
             type="checkbox"
             checked={isActive}
+            style={{ accentColor: ig.blue, width: 16, height: 16 }}
             onChange={(e) => {
               setIsActive(e.target.checked);
               persist(e.target.checked, ctx);
@@ -63,13 +64,13 @@ export default function DmAgentToggle({
       </div>
 
       {!hasAnthropic && (
-        <p style={{ fontSize: 12, color: colors.or, margin: "10px 0 0" }}>
+        <p style={{ fontSize: 12, color: ig.danger, margin: "10px 0 0" }}>
           ⚠️ ANTHROPIC_API_KEY manquante dans Vercel — l&apos;agent ne pourra pas générer de réponses.
         </p>
       )}
 
       <div style={{ marginTop: 12 }}>
-        <label style={{ fontSize: 12, color: colors.muted, display: "block", marginBottom: 4 }}>
+        <label style={{ fontSize: 12, color: ig.muted, display: "block", marginBottom: 6 }}>
           Contexte donné à l&apos;agent (ton, infos générales, ce qu&apos;il peut dire)
         </label>
         <textarea
@@ -77,13 +78,13 @@ export default function DmAgentToggle({
           onChange={(e) => setCtx(e.target.value)}
           onBlur={() => persist(isActive, ctx)}
           rows={3}
-          placeholder="Ex: Collectif de soirées privées chic à Paris. On accueille avec bienveillance, on tutoie, on ne promet jamais une place. Pour s'inscrire : remplir le formulaire en bio."
-          style={{ ...input, fontSize: 13, resize: "vertical", fontFamily: "inherit" }}
+          placeholder="Ex: J'invite des filles (avec une copine) à un dîner offert puis en soirée club sur notre table VIP…"
+          style={{ ...igInput, width: "100%", borderRadius: 14, resize: "vertical", boxSizing: "border-box", fontSize: 13, lineHeight: 1.45 }}
         />
       </div>
 
-      {saved && <p style={{ fontSize: 12, color: colors.vert, margin: "8px 0 0" }}>✓ Enregistré</p>}
-      {pending && <p style={{ fontSize: 12, color: colors.muted, margin: "8px 0 0" }}>Enregistrement…</p>}
+      {saved && <p style={{ fontSize: 12, color: ig.blue, margin: "8px 0 0" }}>✓ Enregistré</p>}
+      {pending && <p style={{ fontSize: 12, color: ig.muted, margin: "8px 0 0" }}>Enregistrement…</p>}
     </div>
   );
 }

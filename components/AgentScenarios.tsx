@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { colors } from "@/lib/ui";
+import { ig, igCard, igAvatar } from "@/lib/igStyle";
 
 type Line =
   | { from: "girl"; text: string }
@@ -19,7 +19,7 @@ type Scenario = {
  * Historique de démonstration : conversations déjà gérées par l'agent, affichées
  * comme la boîte de réception DM du compte Instagram. Vue « côté compte » :
  * messages des abonnées à gauche, réponses de l'agent à droite.
- * Ce sont des exemples calibrés (statiques) pour montrer le comportement.
+ * Scénarios tirés des vraies conversations du compte (anonymisés).
  */
 const SCENARIOS: Scenario[] = [
   {
@@ -85,8 +85,6 @@ const SCENARIOS: Scenario[] = [
   },
 ];
 
-const IG_GRADIENT = "linear-gradient(135deg, #405DE6, #833AB4, #C13584, #E1306C)";
-
 function lastPreview(s: Scenario): string {
   const l = s.lines[s.lines.length - 1];
   if (l.from === "human") return "⚠️ À traiter par toi";
@@ -96,59 +94,54 @@ function lastPreview(s: Scenario): string {
 export default function AgentScenarios() {
   const [open, setOpen] = useState<number | null>(null);
 
-  const frame = {
-    maxWidth: 460,
-    margin: "0 auto",
-    borderRadius: 20,
-    overflow: "hidden" as const,
-    border: `1px solid ${colors.border}`,
-    background: "#0d0d12",
-    boxShadow: "0 12px 40px rgba(0,0,0,0.45)",
-  };
+  const frame = { ...igCard, maxWidth: 460, margin: "0 auto", boxShadow: "0 12px 40px rgba(0,0,0,0.45)" };
 
   if (open !== null) {
     const s = SCENARIOS[open];
+    const av = igAvatar(34, s.avatar);
     return (
       <div style={frame}>
-        {/* Header conversation */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderBottom: `1px solid ${colors.border}`, background: "#15151c" }}>
-          <button onClick={() => setOpen(null)} style={{ background: "transparent", border: "none", color: "#fff", fontSize: 20, cursor: "pointer", padding: 0, lineHeight: 1 }}>
+        {/* En-tête conversation */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderBottom: `1px solid ${ig.border}` }}>
+          <button
+            onClick={() => setOpen(null)}
+            style={{ background: "transparent", border: "none", color: ig.text, fontSize: 22, cursor: "pointer", padding: "0 4px 0 0", lineHeight: 1 }}
+            aria-label="Retour"
+          >
             ‹
           </button>
-          <div style={{ width: 34, height: 34, borderRadius: "50%", padding: 2, background: IG_GRADIENT }}>
-            <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "#0d0d12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>
-              {s.avatar}
-            </div>
-          </div>
-          <div style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>{s.name}</div>
+          <div style={av.ring}><div style={av.inner}>{av.emoji}</div></div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: ig.text }}>{s.name}</div>
         </div>
 
         {/* Fil */}
-        <div style={{ height: 380, overflowY: "auto", padding: "16px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ height: 380, overflowY: "auto", padding: "16px 12px", display: "flex", flexDirection: "column", gap: 3, background: ig.bg }}>
           {s.lines.map((l, i) => {
             if (l.from === "human") {
               return (
-                <div key={i} style={{ alignSelf: "center", maxWidth: "92%", textAlign: "center" }}>
-                  <span style={{ fontSize: 11.5, color: colors.or, background: "#1c1710", padding: "7px 13px", borderRadius: 12, display: "inline-block", lineHeight: 1.4 }}>
+                <div key={i} style={{ alignSelf: "center", maxWidth: "92%", textAlign: "center", marginTop: 8 }}>
+                  <span style={{ fontSize: 11.5, color: ig.muted, background: ig.elevated, padding: "7px 13px", borderRadius: 12, display: "inline-block", lineHeight: 1.4 }}>
                     🙈 {l.text}
                   </span>
                 </div>
               );
             }
             const isAgent = l.from === "agent";
+            const prev = s.lines[i - 1];
+            const grouped = prev && prev.from === l.from;
             return (
-              <div key={i} style={{ display: "flex", justifyContent: isAgent ? "flex-end" : "flex-start" }}>
+              <div key={i} style={{ display: "flex", justifyContent: isAgent ? "flex-end" : "flex-start", marginTop: grouped ? 0 : 8 }}>
                 <div
                   style={{
-                    maxWidth: "76%",
+                    maxWidth: "72%",
                     padding: "9px 13px",
-                    borderRadius: 18,
+                    borderRadius: 22,
                     fontSize: 14,
                     lineHeight: 1.4,
                     color: "#fff",
-                    background: isAgent ? IG_GRADIENT : "#2a2a32",
-                    borderBottomRightRadius: isAgent ? 4 : 18,
-                    borderBottomLeftRadius: isAgent ? 18 : 4,
+                    background: isAgent ? ig.blue : ig.bubbleIn,
+                    borderBottomRightRadius: isAgent ? 6 : 22,
+                    borderBottomLeftRadius: isAgent ? 22 : 6,
                     whiteSpace: "pre-wrap",
                     wordBreak: "break-word",
                   }}
@@ -165,16 +158,17 @@ export default function AgentScenarios() {
 
   return (
     <div style={frame}>
-      {/* Header inbox */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px", borderBottom: `1px solid ${colors.border}`, background: "#15151c" }}>
-        <span style={{ fontWeight: 800, fontSize: 15, color: "#fff" }}>nightlife.paris</span>
-        <span style={{ fontSize: 12, color: colors.muted }}>· Messages</span>
+      {/* En-tête inbox */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "14px 16px", borderBottom: `1px solid ${ig.border}` }}>
+        <span style={{ fontWeight: 800, fontSize: 15, color: ig.text }}>guest_for_dinner</span>
+        <span style={{ fontSize: 12, color: ig.muted }}>· exemples gérés par l&apos;agent</span>
       </div>
 
       {/* Liste des conversations */}
       <div style={{ maxHeight: 420, overflowY: "auto" }}>
         {SCENARIOS.map((s, i) => {
           const needsHuman = s.lines[s.lines.length - 1].from === "human";
+          const av = igAvatar(52, s.avatar);
           return (
             <button
               key={i}
@@ -184,28 +178,25 @@ export default function AgentScenarios() {
                 display: "flex",
                 alignItems: "center",
                 gap: 12,
-                padding: "11px 14px",
+                padding: "10px 16px",
                 background: "transparent",
                 border: "none",
-                borderBottom: `1px solid ${colors.border}`,
                 cursor: "pointer",
                 textAlign: "left",
+                fontFamily: ig.font,
               }}
             >
-              <div style={{ width: 46, height: 46, borderRadius: "50%", padding: 2, background: IG_GRADIENT, flexShrink: 0 }}>
-                <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "#0d0d12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
-                  {s.avatar}
-                </div>
-              </div>
+              <div style={av.ring}><div style={av.inner}>{av.emoji}</div></div>
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                  <span style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>{s.name}</span>
-                  <span style={{ fontSize: 11, color: colors.muted, flexShrink: 0 }}>{s.time}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 14, color: ig.text }}>{s.name}</span>
+                  {needsHuman && <span style={{ fontSize: 11 }}>🚩</span>}
                 </div>
                 <div
                   style={{
                     fontSize: 13,
-                    color: needsHuman ? colors.or : colors.muted,
+                    color: needsHuman ? ig.text : ig.muted,
+                    fontWeight: needsHuman ? 700 : 400,
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
@@ -213,6 +204,7 @@ export default function AgentScenarios() {
                   }}
                 >
                   {lastPreview(s)}
+                  <span style={{ color: ig.muted, fontWeight: 400 }}> · {s.time}</span>
                 </div>
               </div>
             </button>
