@@ -4,6 +4,7 @@ import DmAgentToggle from "@/components/DmAgentToggle";
 import AgentTester from "@/components/AgentTester";
 import AgentScenarios from "@/components/AgentScenarios";
 import { prisma } from "@/lib/prisma";
+import { ensureDmDefaults } from "@/lib/dmSeed";
 import { colors } from "@/lib/ui";
 
 /**
@@ -11,6 +12,10 @@ import { colors } from "@/lib/ui";
  * exemples et FAQ. Rendu à l'intérieur de la coque 2 volets — pas de nav propre.
  */
 export default async function MessagesPanel() {
+  // Première ouverture : FAQ + contexte pré-remplis depuis les vraies
+  // conversations du compte (no-op si déjà remplis).
+  await ensureDmDefaults();
+
   // Résilience : une panne DB ne doit pas produire d'écran noir.
   let conversations: ConversationDTO[] = [];
   let faq: FaqDTO[] = [];
