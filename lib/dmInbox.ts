@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
 import { sendDM, type Channel } from "./instagram";
 import { decideDmReply, type DmHistoryItem, type FaqItem } from "./dmAgent";
-import { loadPlanning, planningToText } from "./planning";
+import { loadEffectivePlanning, planningToText } from "./planning";
 
 /**
  * Cœur de la boîte de réception DM. Reçoit un message entrant normalisé (quel
@@ -95,7 +95,7 @@ export async function ingestInboundMessage(input: InboundMessage): Promise<Inges
     take: 12,
   });
   const faq = await loadFaq();
-  const planning = planningToText(await loadPlanning());
+  const planning = planningToText(await loadEffectivePlanning());
 
   const decision = await decideDmReply(
     apiKey,
