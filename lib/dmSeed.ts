@@ -10,12 +10,12 @@ export const DEFAULT_FAQ: { question: string; answer: string }[] = [
   {
     question: "C'est quoi le concept ? / Comment ça marche ?",
     answer:
-      "Je collabore avec plusieurs restaurants festifs et clubs parisiens. Le principe : tu es invitée avec une copine à un dîner offert au restaurant, puis on enchaîne sur la soirée au club à notre table VIP (entrée et conso offertes), où on reste ensemble au moins jusqu'à 2h30. Le rendez-vous au restaurant est à 21h précises.",
+      "Je collabore avec plusieurs restaurants festifs et clubs parisiens. Le principe : tu es invitée avec une copine à un dîner offert au restaurant, puis on enchaîne sur la soirée au club à notre table VIP, où on reste ensemble au moins jusqu'à 2h30. Le rendez-vous au restaurant est à 21h précises.",
   },
   {
     question: "C'est vraiment gratuit ? Il y a un piège ?",
     answer:
-      "Oui : c'est le club qui finance le dîner, et l'entrée + la conso au club sont offertes — tu n'as rien à régler. En échange, on participe à la soirée du club après le dîner et on y reste au moins jusqu'à 2h30. Au resto comme au club, vous êtes placées à des tables VIP réservées aux filles — on ne te demandera jamais d'interagir avec qui que ce soit.",
+      "Oui : c'est le club qui finance le dîner, et là-bas notre table VIP t'attend, tu n'as rien à régler. En échange, on participe à la soirée du club après le dîner et on y reste au moins jusqu'à 2h30. Au resto comme au club, vous êtes placées à des tables VIP réservées aux filles, on ne te demandera jamais d'interagir avec qui que ce soit.",
   },
   {
     question: "À quelle heure ? / What time?",
@@ -34,7 +34,7 @@ export const DEFAULT_FAQ: { question: string; answer: string }[] = [
   {
     question: "Je peux venir avec mon copain / un ami ?",
     answer:
-      "La soirée est réservée aux filles — les tables au resto et au club sont 100% filles. Tu peux venir avec une copine : envoie-moi son Instagram.",
+      "La soirée est réservée aux filles, les tables au resto et au club sont 100% filles. Tu peux venir avec une copine : envoie-moi son Instagram.",
   },
   {
     question: "C'est où ? / Quelle adresse ?",
@@ -58,6 +58,7 @@ export const DEFAULT_CONTEXTE =
  * (jamais si le promoteur l'a éditée à la main).
  */
 const FAQ_UPGRADES: { question: string; oldAnswer: string; newAnswer: string }[] = [
+  // Concept : v1 (champagne offerts) et v2 (entrée et conso offertes) → version actuelle
   {
     question: "C'est quoi le concept ? / Comment ça marche ?",
     oldAnswer:
@@ -65,10 +66,30 @@ const FAQ_UPGRADES: { question: string; oldAnswer: string; newAnswer: string }[]
     newAnswer: DEFAULT_FAQ[0].answer,
   },
   {
+    question: "C'est quoi le concept ? / Comment ça marche ?",
+    oldAnswer:
+      "Je collabore avec plusieurs restaurants festifs et clubs parisiens. Le principe : tu es invitée avec une copine à un dîner offert au restaurant, puis on enchaîne sur la soirée au club à notre table VIP (entrée et conso offertes), où on reste ensemble au moins jusqu'à 2h30. Le rendez-vous au restaurant est à 21h précises.",
+    newAnswer: DEFAULT_FAQ[0].answer,
+  },
+  // Gratuité : v1 (avis Google/story) et v2 (entrée + conso, tirets) → version actuelle
+  {
     question: "C'est vraiment gratuit ? Il y a un piège ?",
     oldAnswer:
       "Oui, c'est offert : le dîner et la table VIP font partie de ma collaboration avec les lieux, en échange de ta participation à la soirée. Le restaurant demande parfois juste un avis Google et une story Insta. Au resto comme au club, vous êtes placées à des tables VIP réservées aux filles — on ne te demandera jamais d'interagir avec qui que ce soit.",
     newAnswer: DEFAULT_FAQ[1].answer,
+  },
+  {
+    question: "C'est vraiment gratuit ? Il y a un piège ?",
+    oldAnswer:
+      "Oui : c'est le club qui finance le dîner, et l'entrée + la conso au club sont offertes — tu n'as rien à régler. En échange, on participe à la soirée du club après le dîner et on y reste au moins jusqu'à 2h30. Au resto comme au club, vous êtes placées à des tables VIP réservées aux filles — on ne te demandera jamais d'interagir avec qui que ce soit.",
+    newAnswer: DEFAULT_FAQ[1].answer,
+  },
+  // Copain/ami : v1 (tiret) → version actuelle
+  {
+    question: "Je peux venir avec mon copain / un ami ?",
+    oldAnswer:
+      "La soirée est réservée aux filles — les tables au resto et au club sont 100% filles. Tu peux venir avec une copine : envoie-moi son Instagram.",
+    newAnswer: DEFAULT_FAQ[5].answer,
   },
 ];
 
