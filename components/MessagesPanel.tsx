@@ -6,7 +6,7 @@ import AgentScenarios from "@/components/AgentScenarios";
 import PlanningWeek from "@/components/PlanningWeek";
 import { prisma } from "@/lib/prisma";
 import { ensureDmDefaults } from "@/lib/dmSeed";
-import { loadPlanning, parisToday } from "@/lib/planning";
+import { loadPlanning, loadWeekOverrides, parisToday, parisWeekKey, weekLabel } from "@/lib/planning";
 import { ig } from "@/lib/igStyle";
 
 /**
@@ -77,7 +77,13 @@ export default async function MessagesPanel() {
   const needsHuman = conversations.filter((c) => c.status === "NEEDS_HUMAN").length;
   const hasAnthropic = !!process.env.ANTHROPIC_API_KEY;
   const planning = await loadPlanning();
+  const overrides = await loadWeekOverrides();
   const today = parisToday();
+  // Semaine en cours + les 3 suivantes, personnalisables une par une.
+  const weeks = [0, 1, 2, 3].map((i) => {
+    const key = parisWeekKey(i);
+    return { key, label: weekLabel(key), isCurrent: i === 0 };
+  });
 
   const sectionTitle = {
     fontSize: 14,
@@ -120,7 +126,7 @@ export default async function MessagesPanel() {
 
       <DmAgentToggle active={agentActive} contexte={agentContexte} hasAnthropic={hasAnthropic} />
 
-      <PlanningWeek initialDays={planning} today={today} />
+      <PlanningWeek initialDays={planning} initialOverrides={overrides} weeks={weeks} today={today} />
 
       <MessagesInbox initialConversations={conversations} />
 

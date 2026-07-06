@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { decideDmReply, type DmHistoryItem } from "@/lib/dmAgent";
 import { loadFaq, agentConfig } from "@/lib/dmInbox";
-import { loadPlanning, planningToText } from "@/lib/planning";
+import { loadEffectivePlanning, planningToText } from "@/lib/planning";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const [faq, cfg, planningDays] = await Promise.all([loadFaq(), agentConfig(), loadPlanning()]);
+    const [faq, cfg, planningDays] = await Promise.all([loadFaq(), agentConfig(), loadEffectivePlanning()]);
     const decision = await decideDmReply(apiKey, faq, history, cfg.contexte, planningToText(planningDays));
 
     return NextResponse.json({
