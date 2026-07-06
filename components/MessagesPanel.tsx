@@ -3,8 +3,10 @@ import FaqManager, { type FaqDTO } from "@/components/FaqManager";
 import DmAgentToggle from "@/components/DmAgentToggle";
 import AgentTester from "@/components/AgentTester";
 import AgentScenarios from "@/components/AgentScenarios";
+import PlanningWeek from "@/components/PlanningWeek";
 import { prisma } from "@/lib/prisma";
 import { ensureDmDefaults } from "@/lib/dmSeed";
+import { loadPlanning, parisToday } from "@/lib/planning";
 import { ig } from "@/lib/igStyle";
 
 /**
@@ -74,6 +76,8 @@ export default async function MessagesPanel() {
 
   const needsHuman = conversations.filter((c) => c.status === "NEEDS_HUMAN").length;
   const hasAnthropic = !!process.env.ANTHROPIC_API_KEY;
+  const planning = await loadPlanning();
+  const today = parisToday();
 
   const sectionTitle = {
     fontSize: 14,
@@ -115,6 +119,8 @@ export default async function MessagesPanel() {
       )}
 
       <DmAgentToggle active={agentActive} contexte={agentContexte} hasAnthropic={hasAnthropic} />
+
+      <PlanningWeek initialDays={planning} today={today} />
 
       <MessagesInbox initialConversations={conversations} />
 
