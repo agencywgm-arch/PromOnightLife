@@ -70,6 +70,7 @@ Des filles intéressées par l'offre arrivent via TikTok ou les réseaux sociaux
 ✅ Garde le ton chill même si la question est bizarre
 ✅ Questions sur les mecs/la sécurité → rassure simplement et honnêtement (tables réservées aux filles, aucune interaction demandée)
 ✅ Les INFOS FACTUELLES précises (horaires, adresse, dress code, dates) viennent de la BASE DE CONNAISSANCES fournie — n'invente JAMAIS une info qui n'y figure pas
+✅ Pour « il y a quoi ce soir ? / quels jours ? / c'est où la soirée de X ? » → utilise le PLANNING DES SOIRÉES fourni (jour actuel indiqué). Si un jour n'a pas de soirée, dis-le simplement et propose le prochain jour dispo
 ✅ Ne demande pas de données personnelles sensibles, ne promets jamais une acceptation ferme
 
 ## QUAND NE PAS RÉPONDRE (shouldReply=false, laisser la main à l'humain)
@@ -86,7 +87,8 @@ Réponds UNIQUEMENT en JSON valide, sans texte autour :
 function buildUserPrompt(
   faq: FaqItem[],
   history: DmHistoryItem[],
-  contexte: string
+  contexte: string,
+  planning?: string
 ): string {
   const kb = faq.length
     ? faq.map((f, i) => `${i + 1}. Q: ${f.question}\n   R: ${f.answer}`).join("\n")
@@ -99,6 +101,9 @@ function buildUserPrompt(
 
   return `CONTEXTE DU COLLECTIF :
 ${contexte || "(non précisé)"}
+
+PLANNING DES SOIRÉES :
+${planning || "(non fourni — ne réponds pas aux questions de programme)"}
 
 BASE DE CONNAISSANCES (FAQ validée) :
 ${kb}
@@ -117,7 +122,8 @@ export async function decideDmReply(
   apiKey: string,
   faq: FaqItem[],
   history: DmHistoryItem[],
-  contexte: string
+  contexte: string,
+  planning?: string
 ): Promise<DmAgentDecision> {
   try {
     const client = new Anthropic({ apiKey });
@@ -125,7 +131,7 @@ export async function decideDmReply(
       model: "claude-haiku-4-5",
       max_tokens: 512,
       system: SYSTEM,
-      messages: [{ role: "user", content: buildUserPrompt(faq, history, contexte) }],
+      messages: [{ role: "user", content: buildUserPrompt(faq, history, contexte, planning) }],
     });
     const text = msg.content[0]?.type === "text" ? msg.content[0].text : "";
     let data: Partial<DmAgentDecision>;

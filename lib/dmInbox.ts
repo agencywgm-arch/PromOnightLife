@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { sendDM, type Channel } from "./instagram";
 import { decideDmReply, type DmHistoryItem, type FaqItem } from "./dmAgent";
+import { loadPlanning, planningToText } from "./planning";
 
 /**
  * Cœur de la boîte de réception DM. Reçoit un message entrant normalisé (quel
@@ -94,12 +95,14 @@ export async function ingestInboundMessage(input: InboundMessage): Promise<Inges
     take: 12,
   });
   const faq = await loadFaq();
+  const planning = planningToText(await loadPlanning());
 
   const decision = await decideDmReply(
     apiKey,
     faq,
     history.map((m): DmHistoryItem => ({ direction: m.direction as "IN" | "OUT", text: m.text })),
-    contexte
+    contexte,
+    planning
   );
 
   // 3. L'agent ne sait pas → on escalade en humain, sans rien envoyer.
