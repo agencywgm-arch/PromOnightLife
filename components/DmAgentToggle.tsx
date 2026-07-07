@@ -11,20 +11,23 @@ import { ig, igCard, igInput } from "@/lib/igStyle";
 export default function DmAgentToggle({
   active,
   contexte,
+  offre,
   hasAnthropic,
 }: {
   active: boolean;
   contexte: string;
+  offre: string;
   hasAnthropic: boolean;
 }) {
   const [isActive, setIsActive] = useState(active);
   const [ctx, setCtx] = useState(contexte);
+  const [off, setOff] = useState(offre);
   const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  function persist(nextActive: boolean, nextCtx: string) {
+  function persist(nextActive: boolean, nextCtx: string, nextOffre: string) {
     startTransition(async () => {
-      await saveAgentConfig("dm-agent", nextActive, { contexte: nextCtx });
+      await saveAgentConfig("dm-agent", nextActive, { contexte: nextCtx, offre: nextOffre });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     });
@@ -56,7 +59,7 @@ export default function DmAgentToggle({
             style={{ accentColor: ig.blue, width: 16, height: 16 }}
             onChange={(e) => {
               setIsActive(e.target.checked);
-              persist(e.target.checked, ctx);
+              persist(e.target.checked, ctx, off);
             }}
           />
           {isActive ? "Activé" : "Désactivé"}
@@ -76,9 +79,23 @@ export default function DmAgentToggle({
         <textarea
           value={ctx}
           onChange={(e) => setCtx(e.target.value)}
-          onBlur={() => persist(isActive, ctx)}
+          onBlur={() => persist(isActive, ctx, off)}
           rows={3}
           placeholder="Ex: J'invite des filles (avec une copine) à un dîner offert puis en soirée club sur notre table VIP…"
+          style={{ ...igInput, width: "100%", borderRadius: 14, resize: "vertical", boxSizing: "border-box", fontSize: 13, lineHeight: 1.45 }}
+        />
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <label style={{ fontSize: 12, color: ig.muted, display: "block", marginBottom: 6 }}>
+          Offre en cours au resto (ce qui est pris en charge, selon le deal du moment)
+        </label>
+        <textarea
+          value={off}
+          onChange={(e) => setOff(e.target.value)}
+          onBlur={() => persist(isActive, ctx, off)}
+          rows={2}
+          placeholder="Ex: Entrée, plat, dessert et boissons pendant le dîner."
           style={{ ...igInput, width: "100%", borderRadius: 14, resize: "vertical", boxSizing: "border-box", fontSize: 13, lineHeight: 1.45 }}
         />
       </div>
