@@ -48,6 +48,13 @@ export const DEFAULT_FAQ: { question: string; answer: string }[] = [
   },
 ];
 
+/**
+ * Offre par défaut au restaurant (variable selon les deals avec les clubs,
+ * modifiable dans l'interface — jamais en dur dans le prompt).
+ */
+export const DEFAULT_OFFRE =
+  "Entrée, plat, dessert et boissons pendant le dîner.";
+
 /** Contexte de départ de l'agent, calqué sur le vrai ton du compte. */
 export const DEFAULT_CONTEXTE =
   "Compte de promotion « dîner + soirée offerts » pour filles à Paris. Je collabore avec des restaurants festifs et des clubs parisiens : j'invite les filles (avec une copine) à un dîner offert puis à la soirée au club sur notre table VIP. Ton posé, chaleureux et rassurant, tutoiement élégant, réponds dans la langue du message (français ou anglais). Ne promets jamais une place sans confirmation, ne donne pas l'adresse exacte avant confirmation, ne parle jamais d'argent ni de rémunération.";
@@ -124,9 +131,18 @@ export async function ensureDmDefaults(): Promise<void> {
         data: {
           agentId: "dm-agent",
           active: false,
-          values: JSON.stringify({ contexte: DEFAULT_CONTEXTE }),
+          values: JSON.stringify({ contexte: DEFAULT_CONTEXTE, offre: DEFAULT_OFFRE }),
         },
       });
+    } else {
+      // Config existante sans offre : on ajoute l'offre par défaut sans toucher au reste.
+      const values = JSON.parse(cfg.values || "{}") as Record<string, string>;
+      if (!values.offre) {
+        await prisma.agentConfig.update({
+          where: { agentId: "dm-agent" },
+          data: { values: JSON.stringify({ ...values, offre: DEFAULT_OFFRE }) },
+        });
+      }
     }
   } catch (e) {
     console.error("[dmSeed] seed contexte impossible :", e);

@@ -18,14 +18,14 @@ export type InboundMessage = {
 };
 
 /** L'agent global est-il activé ? (AgentConfig "dm-agent") */
-export async function agentConfig(): Promise<{ active: boolean; contexte: string }> {
+export async function agentConfig(): Promise<{ active: boolean; contexte: string; offre: string }> {
   try {
     const cfg = await prisma.agentConfig.findUnique({ where: { agentId: "dm-agent" } });
-    if (!cfg) return { active: false, contexte: "" };
+    if (!cfg) return { active: false, contexte: "", offre: "" };
     const values = JSON.parse(cfg.values || "{}") as Record<string, string>;
-    return { active: cfg.active, contexte: values.contexte || "" };
+    return { active: cfg.active, contexte: values.contexte || "", offre: values.offre || "" };
   } catch {
-    return { active: false, contexte: "" };
+    return { active: false, contexte: "", offre: "" };
   }
 }
 
@@ -83,7 +83,7 @@ export async function ingestInboundMessage(input: InboundMessage): Promise<Inges
   });
 
   // 2. L'agent peut-il répondre ? (global activé + auto sur cette conv)
-  const { active, contexte } = await agentConfig();
+  const { active, contexte, offre } = await agentConfig();
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!active || !convo.autoReply || !apiKey) {
     return { conversationId: convo.id, replied: false, reason: "agent inactif sur cette conversation" };
@@ -102,7 +102,8 @@ export async function ingestInboundMessage(input: InboundMessage): Promise<Inges
     faq,
     history.map((m): DmHistoryItem => ({ direction: m.direction as "IN" | "OUT", text: m.text })),
     contexte,
-    planning
+    planning,
+    offre
   );
 
   // 3. L'agent ne sait pas → on escalade en humain, sans rien envoyer.

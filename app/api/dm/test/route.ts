@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     }
 
     const [faq, cfg, planningDays] = await Promise.all([loadFaq(), agentConfig(), loadEffectivePlanning()]);
-    const decision = await decideDmReply(apiKey, faq, history, cfg.contexte, planningToText(planningDays));
+    const decision = await decideDmReply(apiKey, faq, history, cfg.contexte, planningToText(planningDays), cfg.offre);
 
     return NextResponse.json({
       ok: true,

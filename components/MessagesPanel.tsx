@@ -23,6 +23,7 @@ export default async function MessagesPanel() {
   let faq: FaqDTO[] = [];
   let agentActive = false;
   let agentContexte = "";
+  let agentOffre = "";
   try {
     const rows = await prisma.conversation.findMany({
       orderBy: { lastAt: "desc" },
@@ -69,6 +70,7 @@ export default async function MessagesPanel() {
       agentActive = cfg.active;
       const v = JSON.parse(cfg.values || "{}") as Record<string, string>;
       agentContexte = v.contexte || "";
+      agentOffre = v.offre || "";
     }
   } catch {
     /* ignore */
@@ -124,7 +126,7 @@ export default async function MessagesPanel() {
         </p>
       )}
 
-      <DmAgentToggle active={agentActive} contexte={agentContexte} hasAnthropic={hasAnthropic} />
+      <DmAgentToggle active={agentActive} contexte={agentContexte} offre={agentOffre} hasAnthropic={hasAnthropic} />
 
       <PlanningWeek initialDays={planning} initialOverrides={overrides} weeks={weeks} today={today} />
 
