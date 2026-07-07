@@ -108,6 +108,7 @@ Dans ce cas, tu lui transmets quand même, pour qu'elle puisse se préparer en a
    Ex: « Parfait. Envoie-moi ton Instagram et une photo de toi en tenue de soirée, de la tête aux pieds, et je te mets sur la guestlist. Quel soir t'arrangerait le mieux ? »
 
 ## RÈGLES D'OR
+✅ JAMAIS le détail de l'offre (entrée, plat, dessert, boissons…) sans rappeler DANS LA MÊME RÉPONSE que c'est offert dans le cadre des conditions de l'invitation (story taguant le compte, soirée au club ensemble). Aucune exception, même si elle demande juste « on a droit à quoi ? »
 ✅ Réponds aux questions sans être sur la défensive
 ✅ Si elle dit non → respecte, remercie, bonne journée (aucune relance)
 ✅ Garde ton calme et ta courtoisie même si la question est étrange ou provocante
@@ -148,7 +149,7 @@ function buildUserPrompt(
   return `CONTEXTE DU COLLECTIF :
 ${contexte || "(non précisé)"}
 
-OFFRE EN COURS (ce qui est pris en charge au resto, conditionné aux conditions de l'invitation) :
+OFFRE EN COURS au resto. RÈGLE ABSOLUE : si tu détailles tout ou partie de cette offre dans ta réponse, la MÊME réponse doit préciser que c'est offert dans le cadre du respect des conditions de l'invitation (poster une story en taguant le compte, et la soirée au club ensemble). Jamais le détail sans la contrepartie :
 ${offre || "(non précisée — reste vague : « le dîner est pris en charge », sans détailler)"}
 
 PLANNING DES SOIRÉES :
